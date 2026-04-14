@@ -81,6 +81,14 @@ async function initDB() {
       goles2 INTEGER DEFAULT NULL
     )
   `);
+  await pool.query(`CREATE TABLE IF NOT EXISTS playoff_goles (
+    id SERIAL PRIMARY KEY, playoff_partido_id INTEGER REFERENCES playoff_partidos(id),
+    jugador_id INTEGER REFERENCES jugadores(id), futbolista TEXT NOT NULL
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS playoff_tarjetas (
+    id SERIAL PRIMARY KEY, playoff_partido_id INTEGER REFERENCES playoff_partidos(id),
+    jugador_id INTEGER REFERENCES jugadores(id), futbolista TEXT NOT NULL, tipo TEXT NOT NULL
+  )`);
   // Migrations for existing tables
   await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS tiene_goleadores INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS tiene_tarjetas INTEGER DEFAULT 0`);
@@ -238,6 +246,11 @@ app.get('/api/ligas/:id', async (req, res) => {
 app.delete('/api/ligas/:id', async (req, res) => {
   try {
     const id = req.params.id;
+    const { rows: ppids } = await pool.query('SELECT id FROM playoff_partidos WHERE liga_id = $1', [id]);
+    for (const p of ppids) {
+      await pool.query('DELETE FROM playoff_goles WHERE playoff_partido_id = $1', [p.id]);
+      await pool.query('DELETE FROM playoff_tarjetas WHERE playoff_partido_id = $1', [p.id]);
+    }
     await pool.query('DELETE FROM playoff_partidos WHERE liga_id = $1', [id]);
     await pool.query('DELETE FROM suspensiones WHERE liga_id = $1', [id]);
     const { rows: pids } = await pool.query('SELECT id FROM partidos WHERE liga_id = $1', [id]);
@@ -263,6 +276,11 @@ app.post('/api/ligas/:id/reiniciar', async (req, res) => {
       await pool.query('DELETE FROM tarjetas WHERE partido_id = $1', [p.id]);
     }
     await pool.query('DELETE FROM suspensiones WHERE liga_id = $1', [id]);
+    const { rows: ppids } = await pool.query('SELECT id FROM playoff_partidos WHERE liga_id = $1', [id]);
+    for (const p of ppids) {
+      await pool.query('DELETE FROM playoff_goles WHERE playoff_partido_id = $1', [p.id]);
+      await pool.query('DELETE FROM playoff_tarjetas WHERE playoff_partido_id = $1', [p.id]);
+    }
     await pool.query('DELETE FROM playoff_partidos WHERE liga_id = $1', [id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -469,6 +487,12 @@ app.get('/api/ligas/:id/playoffs', async (req, res) => {
       LEFT JOIN jugadores j2 ON pp.jugador2_id = j2.id
       WHERE pp.liga_id = $1 ORDER BY pp.ronda, pp.orden
     `, [req.params.id]);
+    for (const p of rows) {
+      const { rows: goles } = await pool.query('SELECT * FROM playoff_goles WHERE playoff_partido_id = $1', [p.id]);
+      const { rows: tarjetas } = await pool.query('SELECT * FROM playoff_tarjetas WHERE playoff_partido_id = $1', [p.id]);
+      p.goles_detalle = goles;
+      p.tarjetas_detalle = tarjetas;
+    }
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -476,7 +500,7 @@ app.get('/api/ligas/:id/playoffs', async (req, res) => {
 // PUT /api/playoff-partidos/:id
 app.put('/api/playoff-partidos/:id', async (req, res) => {
   try {
-    const { goles1, goles2 } = req.body;
+    const { goles1, goles2, goleadores1, goleadores2, tarjetas1, tarjetas2 } = req.body;
     if (goles1 === undefined || goles2 === undefined)
       return res.status(400).json({ error: 'Goles requeridos' });
 
@@ -484,6 +508,36 @@ app.put('/api/playoff-partidos/:id', async (req, res) => {
     if (!pp) return res.status(404).json({ error: 'Partido no encontrado' });
 
     await pool.query('UPDATE playoff_partidos SET goles1 = $1, goles2 = $2 WHERE id = $3', [goles1, goles2, req.params.id]);
+
+    // Goleadores
+    await pool.query('DELETE FROM playoff_goles WHERE playoff_partido_id = $1', [req.params.id]);
+    for (const f of (goleadores1 || [])) {
+      if ((f || '').trim()) await pool.query(
+        'INSERT INTO playoff_goles (playoff_partido_id, jugador_id, futbolista) VALUES ($1,$2,$3)',
+        [req.params.id, pp.jugador1_id, f.trim()]
+      );
+    }
+    for (const f of (goleadores2 || [])) {
+      if ((f || '').trim()) await pool.query(
+        'INSERT INTO playoff_goles (playoff_partido_id, jugador_id, futbolista) VALUES ($1,$2,$3)',
+        [req.params.id, pp.jugador2_id, f.trim()]
+      );
+    }
+
+    // Tarjetas
+    await pool.query('DELETE FROM playoff_tarjetas WHERE playoff_partido_id = $1', [req.params.id]);
+    for (const t of (tarjetas1 || [])) {
+      if ((t.futbolista || '').trim()) await pool.query(
+        'INSERT INTO playoff_tarjetas (playoff_partido_id, jugador_id, futbolista, tipo) VALUES ($1,$2,$3,$4)',
+        [req.params.id, pp.jugador1_id, t.futbolista.trim(), t.tipo]
+      );
+    }
+    for (const t of (tarjetas2 || [])) {
+      if ((t.futbolista || '').trim()) await pool.query(
+        'INSERT INTO playoff_tarjetas (playoff_partido_id, jugador_id, futbolista, tipo) VALUES ($1,$2,$3,$4)',
+        [req.params.id, pp.jugador2_id, t.futbolista.trim(), t.tipo]
+      );
+    }
 
     const { rows: [liga] } = await pool.query('SELECT * FROM ligas WHERE id = $1', [pp.liga_id]);
     const n = liga.num_playoff_jugadores || 4;
@@ -497,6 +551,11 @@ app.put('/api/playoff-partidos/:id', async (req, res) => {
 // POST /api/ligas/:id/resetear-playoffs
 app.post('/api/ligas/:id/resetear-playoffs', async (req, res) => {
   try {
+    const { rows: ppids } = await pool.query('SELECT id FROM playoff_partidos WHERE liga_id = $1', [req.params.id]);
+    for (const p of ppids) {
+      await pool.query('DELETE FROM playoff_goles WHERE playoff_partido_id = $1', [p.id]);
+      await pool.query('DELETE FROM playoff_tarjetas WHERE playoff_partido_id = $1', [p.id]);
+    }
     await pool.query('DELETE FROM playoff_partidos WHERE liga_id = $1', [req.params.id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

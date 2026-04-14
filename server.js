@@ -85,6 +85,19 @@ db.exec(`
     FOREIGN KEY (jugador1_id) REFERENCES jugadores(id),
     FOREIGN KEY (jugador2_id) REFERENCES jugadores(id)
   );
+  CREATE TABLE IF NOT EXISTS playoff_goles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    playoff_partido_id INTEGER NOT NULL,
+    jugador_id INTEGER NOT NULL,
+    futbolista TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS playoff_tarjetas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    playoff_partido_id INTEGER NOT NULL,
+    jugador_id INTEGER NOT NULL,
+    futbolista TEXT NOT NULL,
+    tipo TEXT NOT NULL
+  );
 `);
 
 // Migraciones para ligas existentes
@@ -262,12 +275,16 @@ app.get('/api/ligas/:id/playoffs', (req, res) => {
     LEFT JOIN jugadores j2 ON pp.jugador2_id = j2.id
     WHERE pp.liga_id = ? ORDER BY pp.ronda, pp.orden
   `).all(req.params.id);
+  partidos.forEach(p => {
+    p.goles_detalle = db.prepare('SELECT * FROM playoff_goles WHERE playoff_partido_id = ?').all(p.id);
+    p.tarjetas_detalle = db.prepare('SELECT * FROM playoff_tarjetas WHERE playoff_partido_id = ?').all(p.id);
+  });
   res.json(partidos);
 });
 
 // PUT /api/playoff-partidos/:id
 app.put('/api/playoff-partidos/:id', (req, res) => {
-  const { goles1, goles2 } = req.body;
+  const { goles1, goles2, goleadores1, goleadores2, tarjetas1, tarjetas2 } = req.body;
   if (goles1 === undefined || goles2 === undefined)
     return res.status(400).json({ error: 'Goles requeridos' });
 
@@ -276,6 +293,18 @@ app.put('/api/playoff-partidos/:id', (req, res) => {
 
   db.prepare('UPDATE playoff_partidos SET goles1 = ?, goles2 = ? WHERE id = ?')
     .run(goles1, goles2, req.params.id);
+
+  // Goleadores
+  db.prepare('DELETE FROM playoff_goles WHERE playoff_partido_id = ?').run(req.params.id);
+  const insGol = db.prepare('INSERT INTO playoff_goles (playoff_partido_id, jugador_id, futbolista) VALUES (?, ?, ?)');
+  (goleadores1 || []).forEach(f => { if ((f || '').trim()) insGol.run(req.params.id, pp.jugador1_id, f.trim()); });
+  (goleadores2 || []).forEach(f => { if ((f || '').trim()) insGol.run(req.params.id, pp.jugador2_id, f.trim()); });
+
+  // Tarjetas
+  db.prepare('DELETE FROM playoff_tarjetas WHERE playoff_partido_id = ?').run(req.params.id);
+  const insTar = db.prepare('INSERT INTO playoff_tarjetas (playoff_partido_id, jugador_id, futbolista, tipo) VALUES (?, ?, ?, ?)');
+  (tarjetas1 || []).forEach(t => { if ((t.futbolista || '').trim()) insTar.run(req.params.id, pp.jugador1_id, t.futbolista.trim(), t.tipo); });
+  (tarjetas2 || []).forEach(t => { if ((t.futbolista || '').trim()) insTar.run(req.params.id, pp.jugador2_id, t.futbolista.trim(), t.tipo); });
 
   const liga = db.prepare('SELECT * FROM ligas WHERE id = ?').get(pp.liga_id);
   const n = liga.num_playoff_jugadores || 4;
@@ -287,6 +316,11 @@ app.put('/api/playoff-partidos/:id', (req, res) => {
 
 // POST /api/ligas/:id/resetear-playoffs
 app.post('/api/ligas/:id/resetear-playoffs', (req, res) => {
+  const ppids = db.prepare('SELECT id FROM playoff_partidos WHERE liga_id = ?').all(req.params.id);
+  ppids.forEach(p => {
+    db.prepare('DELETE FROM playoff_goles WHERE playoff_partido_id = ?').run(p.id);
+    db.prepare('DELETE FROM playoff_tarjetas WHERE playoff_partido_id = ?').run(p.id);
+  });
   db.prepare('DELETE FROM playoff_partidos WHERE liga_id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -369,6 +403,11 @@ app.delete('/api/ligas/:id', (req, res) => {
   if (!db.prepare('SELECT id FROM ligas WHERE id = ?').get(id)) {
     return res.status(404).json({ error: 'Liga no encontrada' });
   }
+  const ppids = db.prepare('SELECT id FROM playoff_partidos WHERE liga_id = ?').all(id);
+  ppids.forEach(p => {
+    db.prepare('DELETE FROM playoff_goles WHERE playoff_partido_id = ?').run(p.id);
+    db.prepare('DELETE FROM playoff_tarjetas WHERE playoff_partido_id = ?').run(p.id);
+  });
   db.prepare('DELETE FROM playoff_partidos WHERE liga_id = ?').run(id);
   db.prepare('DELETE FROM suspensiones WHERE liga_id = ?').run(id);
   const pids = db.prepare('SELECT id FROM partidos WHERE liga_id = ?').all(id);
@@ -395,6 +434,11 @@ app.post('/api/ligas/:id/reiniciar', (req, res) => {
     db.prepare('DELETE FROM tarjetas WHERE partido_id = ?').run(p.id);
   });
   db.prepare('DELETE FROM suspensiones WHERE liga_id = ?').run(id);
+  const ppids = db.prepare('SELECT id FROM playoff_partidos WHERE liga_id = ?').all(id);
+  ppids.forEach(p => {
+    db.prepare('DELETE FROM playoff_goles WHERE playoff_partido_id = ?').run(p.id);
+    db.prepare('DELETE FROM playoff_tarjetas WHERE playoff_partido_id = ?').run(p.id);
+  });
   db.prepare('DELETE FROM playoff_partidos WHERE liga_id = ?').run(id);
   res.json({ ok: true });
 });

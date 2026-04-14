@@ -1092,12 +1092,62 @@
 
         // Inputs solo si ambos jugadores están definidos
         if (p.jugador1_id && p.jugador2_id) {
+          const j1name = p.jugador1_nombre || '';
+          const j2name = p.jugador2_nombre || '';
+          const scorers1 = (p.goles_detalle || []).filter(g => g.jugador_id == p.jugador1_id);
+          const scorers2 = (p.goles_detalle || []).filter(g => g.jugador_id == p.jugador2_id);
+          const cards1 = (p.tarjetas_detalle || []).filter(t => t.jugador_id == p.jugador1_id);
+          const cards2 = (p.tarjetas_detalle || []).filter(t => t.jugador_id == p.jugador2_id);
+
+          const oninput1 = ligaActual && ligaActual.tiene_goleadores
+            ? `oninput="updatePlayoffScorerInputs(${p.id},1,this.value)"` : '';
+          const oninput2 = ligaActual && ligaActual.tiene_goleadores
+            ? `oninput="updatePlayoffScorerInputs(${p.id},2,this.value)"` : '';
+
           bracketHTML += `<div class="pm-inputs">
-            <input type="number" min="0" max="99" placeholder="0" id="pg1-${p.id}" value="${jugado ? p.goles1 : ''}" style="width:50px" />
+            <input type="number" min="0" max="99" placeholder="0" id="pg1-${p.id}" value="${jugado ? p.goles1 : ''}" style="width:50px" ${oninput1} />
             <span>-</span>
-            <input type="number" min="0" max="99" placeholder="0" id="pg2-${p.id}" value="${jugado ? p.goles2 : ''}" style="width:50px" />
+            <input type="number" min="0" max="99" placeholder="0" id="pg2-${p.id}" value="${jugado ? p.goles2 : ''}" style="width:50px" ${oninput2} />
             <button class="btn btn-small btn-green" onclick="guardarResultadoPlayoff(${p.id})">✓</button>
           </div>`;
+
+          if (ligaActual && ligaActual.tiene_goleadores) {
+            bracketHTML += `<div class="scorers-grid">
+              <div class="scorers-side">
+                <div class="scorers-label">⚽ ${escHtml(j1name)}</div>
+                <div id="pp-s1-${p.id}">
+                  ${Array.from({length: jugado ? p.goles1 : 0}).map((_, i) =>
+                    `<input type="text" class="scorer-input" placeholder="Gol ${i+1}: futbolista"
+                      value="${scorers1[i] ? escHtml(scorers1[i].futbolista) : ''}" maxlength="25" />`
+                  ).join('')}
+                </div>
+              </div>
+              <div class="scorers-side">
+                <div class="scorers-label">⚽ ${escHtml(j2name)}</div>
+                <div id="pp-s2-${p.id}">
+                  ${Array.from({length: jugado ? p.goles2 : 0}).map((_, i) =>
+                    `<input type="text" class="scorer-input" placeholder="Gol ${i+1}: futbolista"
+                      value="${scorers2[i] ? escHtml(scorers2[i].futbolista) : ''}" maxlength="25" />`
+                  ).join('')}
+                </div>
+              </div>
+            </div>`;
+          }
+
+          if (ligaActual && ligaActual.tiene_tarjetas) {
+            bracketHTML += `<div class="cards-grid" style="margin-top:10px;padding-top:10px;border-top:1px solid #1a1a2e">
+              <div class="cards-side">
+                <div class="scorers-label">🃏 ${escHtml(j1name)}</div>
+                <div id="pp-c1-${p.id}">${cards1.map((c, i) => renderCardRow(p.id + '-pp', 1, i, c.futbolista, c.tipo)).join('')}</div>
+                <button class="btn btn-small btn-outline" style="margin-top:4px" onclick="addTarjetaPP(${p.id},1)">+ Tarjeta</button>
+              </div>
+              <div class="cards-side">
+                <div class="scorers-label">🃏 ${escHtml(j2name)}</div>
+                <div id="pp-c2-${p.id}">${cards2.map((c, i) => renderCardRow(p.id + '-pp', 2, i, c.futbolista, c.tipo)).join('')}</div>
+                <button class="btn btn-small btn-outline" style="margin-top:4px" onclick="addTarjetaPP(${p.id},2)">+ Tarjeta</button>
+              </div>
+            </div>`;
+          }
         }
 
         bracketHTML += `</div>`;
@@ -1131,16 +1181,64 @@
     renderPlayoffs(ligaActualId);
   }
 
+  function addTarjetaPP(partidoId, side) {
+    const container = document.getElementById(`pp-c${side}-${partidoId}`);
+    const idx = container.children.length;
+    const div = document.createElement('div');
+    div.innerHTML = renderCardRow(partidoId + '-pp', side, idx, '', 'amarilla');
+    container.appendChild(div.firstElementChild);
+  }
+
+  function updatePlayoffScorerInputs(partidoId, side, count) {
+    const n = Math.max(0, parseInt(count) || 0);
+    const container = document.getElementById(`pp-s${side}-${partidoId}`);
+    if (!container) return;
+    const existing = Array.from(container.querySelectorAll('input')).map(i => i.value);
+    let html = '';
+    for (let i = 0; i < n; i++) {
+      html += `<input type="text" class="scorer-input" placeholder="Gol ${i+1}: futbolista"
+        value="${escHtml(existing[i] || '')}" maxlength="25" />`;
+    }
+    container.innerHTML = html;
+  }
+
   async function guardarResultadoPlayoff(id) {
     const g1 = document.getElementById(`pg1-${id}`).value;
     const g2 = document.getElementById(`pg2-${id}`).value;
     if (g1 === '' || g2 === '') { alert('Ingresa los goles'); return; }
     const n1 = parseInt(g1), n2 = parseInt(g2);
     if (n1 === n2) { alert('En playoffs no puede haber empate'); return; }
+
+    // Leer goleadores
+    const goleadores1 = [], goleadores2 = [];
+    if (ligaActual && ligaActual.tiene_goleadores) {
+      const s1 = document.getElementById(`pp-s1-${id}`);
+      const s2 = document.getElementById(`pp-s2-${id}`);
+      if (s1) s1.querySelectorAll('input').forEach(inp => goleadores1.push(inp.value));
+      if (s2) s2.querySelectorAll('input').forEach(inp => goleadores2.push(inp.value));
+    }
+
+    // Leer tarjetas
+    const tarjetas1 = [], tarjetas2 = [];
+    if (ligaActual && ligaActual.tiene_tarjetas) {
+      const c1 = document.getElementById(`pp-c1-${id}`);
+      const c2 = document.getElementById(`pp-c2-${id}`);
+      if (c1) c1.querySelectorAll('.card-row').forEach(row => {
+        const f = row.querySelector('.card-futbolista').value;
+        const t = row.querySelector('.card-tipo').value;
+        if (f.trim()) tarjetas1.push({ futbolista: f.trim(), tipo: t });
+      });
+      if (c2) c2.querySelectorAll('.card-row').forEach(row => {
+        const f = row.querySelector('.card-futbolista').value;
+        const t = row.querySelector('.card-tipo').value;
+        if (f.trim()) tarjetas2.push({ futbolista: f.trim(), tipo: t });
+      });
+    }
+
     await fetch(`/api/playoff-partidos/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goles1: n1, goles2: n2 })
+      body: JSON.stringify({ goles1: n1, goles2: n2, goleadores1, goleadores2, tarjetas1, tarjetas2 })
     });
     renderPlayoffs(ligaActualId);
   }
