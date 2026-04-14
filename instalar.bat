@@ -21,8 +21,10 @@ if %errorlevel% neq 0 (
     set "PATH=%PATH%;C:\Program Files\nodejs"
     echo  Node.js instalado!
     echo.
+    REM Marcar que nosotros instalamos Node.js
+    echo 1 > "%~dp0.nodejs_by_fifaLiga"
 ) else (
-    echo  Node.js ya instalado.
+    echo  Node.js ya estaba instalado, no lo tocaremos al desinstalar.
 )
 
 REM --- Instalar dependencias ---
