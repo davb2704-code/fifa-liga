@@ -96,6 +96,7 @@ async function initDB() {
   await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS num_tvs INTEGER DEFAULT 2`);
   await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS tiene_playoffs INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS num_playoff_jugadores INTEGER DEFAULT 4`);
+  await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS ida_vuelta INTEGER DEFAULT 0`);
 }
 
 function generarFixture(jugadores) {
@@ -164,13 +165,13 @@ async function recalcSuspensiones(ligaId) {
 // POST /api/ligas
 app.post('/api/ligas', async (req, res) => {
   try {
-    const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores } = req.body;
+    const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores, ida_vuelta } = req.body;
     if (!nombre || !jugadores || jugadores.length < 2)
       return res.status(400).json({ error: 'Nombre y al menos 2 jugadores requeridos' });
 
     const { rows: [liga] } = await pool.query(
-      'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2, tiene_playoffs ? 1 : 0, num_playoff_jugadores || 4]
+      'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores, ida_vuelta) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2, tiene_playoffs ? 1 : 0, num_playoff_jugadores || 4, ida_vuelta ? 1 : 0]
     );
 
     const jugadoresDb = [];
@@ -186,6 +187,11 @@ app.post('/api/ligas', async (req, res) => {
 
     const nTvs = num_tvs || 2;
     const fechas = generarFixture(jugadoresDb);
+    // Si ida y vuelta: duplicar el fixture con equipos invertidos
+    if (ida_vuelta) {
+      const vuelta = fechas.map(ronda => ronda.map(([j1, j2]) => [j2, j1]));
+      fechas.push(...vuelta);
+    }
     for (let fi = 0; fi < fechas.length; fi++) {
       for (let pi = 0; pi < fechas[fi].length; pi++) {
         const [j1, j2] = fechas[fi][pi];

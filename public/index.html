@@ -489,6 +489,10 @@
           <input type="checkbox" id="check-tarjetas" onchange="toggleCheck('check-tarjetas-label', this.checked)" />
           <span>🟡 Tarjetas y suspensiones</span>
         </label>
+        <label class="opcion-check" id="check-ida-vuelta-label">
+          <input type="checkbox" id="check-ida-vuelta" onchange="toggleCheck('check-ida-vuelta-label', this.checked)" />
+          <span>↔️ Ida y Vuelta</span>
+        </label>
         <label class="opcion-check" id="check-playoffs-label">
           <input type="checkbox" id="check-playoffs" onchange="toggleCheck('check-playoffs-label', this.checked); togglePlayoffsConfig(this.checked)" />
           <span>🏆 Playoffs</span>
@@ -613,11 +617,12 @@
     const tiene_tarjetas = document.getElementById('check-tarjetas').checked;
     const tiene_playoffs = document.getElementById('check-playoffs').checked;
     const num_playoff_jugadores = parseInt(document.getElementById('num-playoff-jugadores').value) || 4;
+    const ida_vuelta = document.getElementById('check-ida-vuelta').checked;
 
     const res = await fetch('/api/ligas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, jugadores: jugadoresPendientes, tiene_goleadores, tiene_tarjetas, num_tvs: numTvsSeleccionado, tiene_playoffs, num_playoff_jugadores })
+      body: JSON.stringify({ nombre, jugadores: jugadoresPendientes, tiene_goleadores, tiene_tarjetas, num_tvs: numTvsSeleccionado, tiene_playoffs, num_playoff_jugadores, ida_vuelta })
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
@@ -632,6 +637,8 @@
     document.getElementById('check-goleadores-label').classList.remove('checked');
     document.getElementById('check-tarjetas-label').classList.remove('checked');
     document.getElementById('check-playoffs-label').classList.remove('checked');
+    document.getElementById('check-ida-vuelta').checked = false;
+    document.getElementById('check-ida-vuelta-label').classList.remove('checked');
     document.getElementById('playoffs-config-wrap').classList.remove('visible');
     document.getElementById('num-playoff-jugadores').value = '4';
     numTvsSeleccionado = 2;
@@ -651,7 +658,9 @@
     el.innerHTML = ligas.map(l => {
       const badges = [
         l.tiene_goleadores ? '⚽' : '',
-        l.tiene_tarjetas   ? '🟡' : ''
+        l.tiene_tarjetas   ? '🟡' : '',
+        l.ida_vuelta       ? '↔️' : '',
+        l.tiene_playoffs   ? '🏆' : ''
       ].filter(Boolean).join(' ');
       return `<div class="liga-item" onclick="abrirLiga(${l.id})">
         <div>
@@ -727,8 +736,22 @@
       porFecha[p.fecha].push(p);
     });
 
+    // Para ida y vuelta: detectar el punto medio (mitad de fechas = vuelta)
+    const todasFechas = Object.keys(porFecha).map(Number).sort((a, b) => a - b);
+    const mitad = liga.ida_vuelta ? Math.ceil(todasFechas.length / 2) : null;
+    let idaMostrada = false, vueltaMostrada = false;
+
     let html = filtrosHtml;
-    Object.keys(porFecha).sort((a, b) => a - b).forEach(fecha => {
+    todasFechas.forEach(fecha => {
+      if (liga.ida_vuelta) {
+        if (fecha <= mitad && !idaMostrada) {
+          html += `<div class="fecha-header" style="border-left-color:#00c853;background:linear-gradient(90deg,#00c85322,transparent)">— IDA —</div>`;
+          idaMostrada = true;
+        } else if (fecha > mitad && !vueltaMostrada) {
+          html += `<div class="fecha-header" style="border-left-color:#ff6b00;background:linear-gradient(90deg,#ff6b0022,transparent)">— VUELTA —</div>`;
+          vueltaMostrada = true;
+        }
+      }
       html += `<div class="fecha-header">Fecha ${fecha}</div>`;
       porFecha[fecha].forEach(p => { html += renderPartidoCard(p, liga); });
     });

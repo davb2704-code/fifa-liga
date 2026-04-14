@@ -107,6 +107,7 @@ try { db.exec("ALTER TABLE jugadores ADD COLUMN equipo TEXT DEFAULT ''"); } catc
 try { db.exec("ALTER TABLE ligas ADD COLUMN num_tvs INTEGER DEFAULT 2"); } catch(e) {}
 try { db.exec("ALTER TABLE ligas ADD COLUMN tiene_playoffs INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE ligas ADD COLUMN num_playoff_jugadores INTEGER DEFAULT 4"); } catch(e) {}
+try { db.exec("ALTER TABLE ligas ADD COLUMN ida_vuelta INTEGER DEFAULT 0"); } catch(e) {}
 
 // Genera fixture round-robin
 function generarFixture(jugadores) {
@@ -327,14 +328,14 @@ app.post('/api/ligas/:id/resetear-playoffs', (req, res) => {
 
 // POST /api/ligas - crear liga
 app.post('/api/ligas', (req, res) => {
-  const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores } = req.body;
+  const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores, ida_vuelta } = req.body;
   if (!nombre || !jugadores || jugadores.length < 2) {
     return res.status(400).json({ error: 'Nombre y al menos 2 jugadores requeridos' });
   }
 
   const liga = db.prepare(
-    'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2, tiene_playoffs ? 1 : 0, num_playoff_jugadores || 4);
+    'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores, ida_vuelta) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2, tiene_playoffs ? 1 : 0, num_playoff_jugadores || 4, ida_vuelta ? 1 : 0);
   const ligaId = liga.lastInsertRowid;
 
   const insertJugador = db.prepare('INSERT INTO jugadores (liga_id, nombre, equipo) VALUES (?, ?, ?)');
@@ -347,6 +348,11 @@ app.post('/api/ligas', (req, res) => {
 
   const nTvs = num_tvs || 2;
   const fechas = generarFixture(jugadoresDb);
+  // Si ida y vuelta: duplicar el fixture con equipos invertidos
+  if (ida_vuelta) {
+    const vuelta = fechas.map(ronda => ronda.map(([j1, j2]) => [j2, j1]));
+    fechas.push(...vuelta);
+  }
   const insertPartido = db.prepare(
     'INSERT INTO partidos (liga_id, fecha, tv, jugador1_id, jugador2_id) VALUES (?, ?, ?, ?, ?)'
   );
