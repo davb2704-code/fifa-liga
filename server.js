@@ -71,11 +71,29 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS playoff_partidos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    liga_id INTEGER NOT NULL,
+    ronda TEXT NOT NULL,
+    orden INTEGER NOT NULL,
+    jugador1_id INTEGER,
+    jugador2_id INTEGER,
+    goles1 INTEGER DEFAULT NULL,
+    goles2 INTEGER DEFAULT NULL,
+    FOREIGN KEY (liga_id) REFERENCES ligas(id),
+    FOREIGN KEY (jugador1_id) REFERENCES jugadores(id),
+    FOREIGN KEY (jugador2_id) REFERENCES jugadores(id)
+  );
+`);
+
 // Migraciones para ligas existentes
 try { db.exec("ALTER TABLE ligas ADD COLUMN tiene_goleadores INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE ligas ADD COLUMN tiene_tarjetas INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE jugadores ADD COLUMN equipo TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE ligas ADD COLUMN num_tvs INTEGER DEFAULT 2"); } catch(e) {}
+try { db.exec("ALTER TABLE ligas ADD COLUMN tiene_playoffs INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE ligas ADD COLUMN num_playoff_jugadores INTEGER DEFAULT 4"); } catch(e) {}
 
 // Genera fixture round-robin
 function generarFixture(jugadores) {
@@ -148,16 +166,141 @@ function recalcSuspensiones(ligaId) {
   });
 }
 
+// ── PLAYOFFS HELPERS ─────────────────────────────────────
+
+function getRondas(n) {
+  if (n <= 2) return ['final'];
+  if (n <= 4) return ['semi', 'final'];
+  return ['cuartos', 'semi', 'final'];
+}
+
+// Dado un partido de ronda X, retorna a qué partido de la siguiente ronda va el ganador
+function getAvance(ronda, orden, n) {
+  if (n <= 2) return null;
+  if (n <= 4) {
+    if (ronda === 'semi') return { ronda: 'final', orden: 1, pos: orden === 1 ? 1 : 2 };
+  }
+  if (n <= 8) {
+    if (ronda === 'cuartos') {
+      const map = { 1: [1,1], 2: [2,1], 3: [2,2], 4: [1,2] };
+      const [sfOrden, pos] = map[orden];
+      return { ronda: 'semi', orden: sfOrden, pos };
+    }
+    if (ronda === 'semi') return { ronda: 'final', orden: 1, pos: orden === 1 ? 1 : 2 };
+  }
+  return null;
+}
+
+function avanzarGanador(ligaId, ronda, orden, ganadorId, n) {
+  const avance = getAvance(ronda, orden, n);
+  if (!avance) return;
+  const col = avance.pos === 1 ? 'jugador1_id' : 'jugador2_id';
+  db.prepare(`UPDATE playoff_partidos SET ${col} = ? WHERE liga_id = ? AND ronda = ? AND orden = ?`)
+    .run(ganadorId, ligaId, avance.ronda, avance.orden);
+}
+
+// ── PLAYOFFS ENDPOINTS ────────────────────────────────────
+
+// POST /api/ligas/:id/generar-playoffs
+app.post('/api/ligas/:id/generar-playoffs', (req, res) => {
+  const id = req.params.id;
+  const liga = db.prepare('SELECT * FROM ligas WHERE id = ?').get(id);
+  if (!liga) return res.status(404).json({ error: 'Liga no encontrada' });
+
+  // Limpiar playoffs anteriores
+  db.prepare('DELETE FROM playoff_partidos WHERE liga_id = ?').run(id);
+
+  // Obtener tabla de posiciones
+  const jugadores = db.prepare('SELECT * FROM jugadores WHERE liga_id = ?').all(id);
+  const partidos  = db.prepare('SELECT * FROM partidos WHERE liga_id = ? AND goles1 IS NOT NULL').all(id);
+  const tabla = {};
+  jugadores.forEach(j => { tabla[j.id] = { id: j.id, nombre: j.nombre, pts: 0, dg: 0, gf: 0 }; });
+  partidos.forEach(p => {
+    const j1 = tabla[p.jugador1_id], j2 = tabla[p.jugador2_id];
+    if (!j1 || !j2) return;
+    j1.gf += p.goles1; j1.dg += p.goles1 - p.goles2;
+    j2.gf += p.goles2; j2.dg += p.goles2 - p.goles1;
+    if (p.goles1 > p.goles2) { j1.pts += 3; }
+    else if (p.goles1 < p.goles2) { j2.pts += 3; }
+    else { j1.pts++; j2.pts++; }
+  });
+  const seeds = Object.values(tabla)
+    .sort((a,b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf)
+    .slice(0, liga.num_playoff_jugadores || 4);
+
+  const n = seeds.length;
+  const rondas = getRondas(n);
+  const ins = db.prepare('INSERT INTO playoff_partidos (liga_id, ronda, orden, jugador1_id, jugador2_id) VALUES (?,?,?,?,?)');
+
+  if (n === 2) {
+    ins.run(id, 'final', 1, seeds[0].id, seeds[1].id);
+  } else if (n === 4) {
+    ins.run(id, 'semi', 1, seeds[0].id, seeds[3].id);
+    ins.run(id, 'semi', 2, seeds[1].id, seeds[2].id);
+    ins.run(id, 'final', 1, null, null);
+  } else if (n === 8) {
+    ins.run(id, 'cuartos', 1, seeds[0].id, seeds[7].id);
+    ins.run(id, 'cuartos', 2, seeds[1].id, seeds[6].id);
+    ins.run(id, 'cuartos', 3, seeds[2].id, seeds[5].id);
+    ins.run(id, 'cuartos', 4, seeds[3].id, seeds[4].id);
+    ins.run(id, 'semi', 1, null, null);
+    ins.run(id, 'semi', 2, null, null);
+    ins.run(id, 'final', 1, null, null);
+  }
+
+  res.json({ ok: true });
+});
+
+// GET /api/ligas/:id/playoffs
+app.get('/api/ligas/:id/playoffs', (req, res) => {
+  const partidos = db.prepare(`
+    SELECT pp.*,
+      j1.nombre as jugador1_nombre, j1.equipo as jugador1_equipo,
+      j2.nombre as jugador2_nombre, j2.equipo as jugador2_equipo
+    FROM playoff_partidos pp
+    LEFT JOIN jugadores j1 ON pp.jugador1_id = j1.id
+    LEFT JOIN jugadores j2 ON pp.jugador2_id = j2.id
+    WHERE pp.liga_id = ? ORDER BY pp.ronda, pp.orden
+  `).all(req.params.id);
+  res.json(partidos);
+});
+
+// PUT /api/playoff-partidos/:id
+app.put('/api/playoff-partidos/:id', (req, res) => {
+  const { goles1, goles2 } = req.body;
+  if (goles1 === undefined || goles2 === undefined)
+    return res.status(400).json({ error: 'Goles requeridos' });
+
+  const pp = db.prepare('SELECT * FROM playoff_partidos WHERE id = ?').get(req.params.id);
+  if (!pp) return res.status(404).json({ error: 'Partido no encontrado' });
+
+  db.prepare('UPDATE playoff_partidos SET goles1 = ?, goles2 = ? WHERE id = ?')
+    .run(goles1, goles2, req.params.id);
+
+  const liga = db.prepare('SELECT * FROM ligas WHERE id = ?').get(pp.liga_id);
+  const n = liga.num_playoff_jugadores || 4;
+  const ganadorId = goles1 > goles2 ? pp.jugador1_id : pp.jugador2_id;
+  avanzarGanador(pp.liga_id, pp.ronda, pp.orden, ganadorId, n);
+
+  res.json({ ok: true });
+});
+
+// POST /api/ligas/:id/resetear-playoffs
+app.post('/api/ligas/:id/resetear-playoffs', (req, res) => {
+  db.prepare('DELETE FROM playoff_partidos WHERE liga_id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 // POST /api/ligas - crear liga
 app.post('/api/ligas', (req, res) => {
-  const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs } = req.body;
+  const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores } = req.body;
   if (!nombre || !jugadores || jugadores.length < 2) {
     return res.status(400).json({ error: 'Nombre y al menos 2 jugadores requeridos' });
   }
 
   const liga = db.prepare(
-    'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs) VALUES (?, ?, ?, ?)'
-  ).run(nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2);
+    'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2, tiene_playoffs ? 1 : 0, num_playoff_jugadores || 4);
   const ligaId = liga.lastInsertRowid;
 
   const insertJugador = db.prepare('INSERT INTO jugadores (liga_id, nombre, equipo) VALUES (?, ?, ?)');
@@ -226,6 +369,7 @@ app.delete('/api/ligas/:id', (req, res) => {
   if (!db.prepare('SELECT id FROM ligas WHERE id = ?').get(id)) {
     return res.status(404).json({ error: 'Liga no encontrada' });
   }
+  db.prepare('DELETE FROM playoff_partidos WHERE liga_id = ?').run(id);
   db.prepare('DELETE FROM suspensiones WHERE liga_id = ?').run(id);
   const pids = db.prepare('SELECT id FROM partidos WHERE liga_id = ?').all(id);
   pids.forEach(p => {
@@ -251,6 +395,7 @@ app.post('/api/ligas/:id/reiniciar', (req, res) => {
     db.prepare('DELETE FROM tarjetas WHERE partido_id = ?').run(p.id);
   });
   db.prepare('DELETE FROM suspensiones WHERE liga_id = ?').run(id);
+  db.prepare('DELETE FROM playoff_partidos WHERE liga_id = ?').run(id);
   res.json({ ok: true });
 });
 

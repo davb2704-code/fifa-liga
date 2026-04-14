@@ -69,6 +69,25 @@ async function initDB() {
       UNIQUE(partido_id, jugador_id, futbolista)
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS playoff_partidos (
+      id SERIAL PRIMARY KEY,
+      liga_id INTEGER REFERENCES ligas(id),
+      ronda TEXT NOT NULL,
+      orden INTEGER NOT NULL,
+      jugador1_id INTEGER REFERENCES jugadores(id),
+      jugador2_id INTEGER REFERENCES jugadores(id),
+      goles1 INTEGER DEFAULT NULL,
+      goles2 INTEGER DEFAULT NULL
+    )
+  `);
+  // Migrations for existing tables
+  await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS tiene_goleadores INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS tiene_tarjetas INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS equipo TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS num_tvs INTEGER DEFAULT 2`);
+  await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS tiene_playoffs INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE ligas ADD COLUMN IF NOT EXISTS num_playoff_jugadores INTEGER DEFAULT 4`);
 }
 
 function generarFixture(jugadores) {
@@ -137,13 +156,13 @@ async function recalcSuspensiones(ligaId) {
 // POST /api/ligas
 app.post('/api/ligas', async (req, res) => {
   try {
-    const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs } = req.body;
+    const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores } = req.body;
     if (!nombre || !jugadores || jugadores.length < 2)
       return res.status(400).json({ error: 'Nombre y al menos 2 jugadores requeridos' });
 
     const { rows: [liga] } = await pool.query(
-      'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs) VALUES ($1,$2,$3,$4) RETURNING *',
-      [nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2]
+      'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs, tiene_playoffs, num_playoff_jugadores) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+      [nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2, tiene_playoffs ? 1 : 0, num_playoff_jugadores || 4]
     );
 
     const jugadoresDb = [];
@@ -219,6 +238,7 @@ app.get('/api/ligas/:id', async (req, res) => {
 app.delete('/api/ligas/:id', async (req, res) => {
   try {
     const id = req.params.id;
+    await pool.query('DELETE FROM playoff_partidos WHERE liga_id = $1', [id]);
     await pool.query('DELETE FROM suspensiones WHERE liga_id = $1', [id]);
     const { rows: pids } = await pool.query('SELECT id FROM partidos WHERE liga_id = $1', [id]);
     for (const p of pids) {
@@ -243,6 +263,7 @@ app.post('/api/ligas/:id/reiniciar', async (req, res) => {
       await pool.query('DELETE FROM tarjetas WHERE partido_id = $1', [p.id]);
     }
     await pool.query('DELETE FROM suspensiones WHERE liga_id = $1', [id]);
+    await pool.query('DELETE FROM playoff_partidos WHERE liga_id = $1', [id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -347,6 +368,137 @@ app.get('/api/ligas/:id/tarjetas-resumen', async (req, res) => {
       ORDER BY rojas DESC, amarillas DESC
     `, [req.params.id]);
     res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── PLAYOFFS HELPERS ─────────────────────────────────────
+
+function getRondas(n) {
+  if (n <= 2) return ['final'];
+  if (n <= 4) return ['semi', 'final'];
+  return ['cuartos', 'semi', 'final'];
+}
+
+function getAvance(ronda, orden, n) {
+  if (n <= 2) return null;
+  if (n <= 4) {
+    if (ronda === 'semi') return { ronda: 'final', orden: 1, pos: orden === 1 ? 1 : 2 };
+  }
+  if (n <= 8) {
+    if (ronda === 'cuartos') {
+      const map = { 1: [1,1], 2: [2,1], 3: [2,2], 4: [1,2] };
+      const [sfOrden, pos] = map[orden];
+      return { ronda: 'semi', orden: sfOrden, pos };
+    }
+    if (ronda === 'semi') return { ronda: 'final', orden: 1, pos: orden === 1 ? 1 : 2 };
+  }
+  return null;
+}
+
+async function avanzarGanador(ligaId, ronda, orden, ganadorId, n) {
+  const avance = getAvance(ronda, orden, n);
+  if (!avance) return;
+  const col = avance.pos === 1 ? 'jugador1_id' : 'jugador2_id';
+  await pool.query(
+    `UPDATE playoff_partidos SET ${col} = $1 WHERE liga_id = $2 AND ronda = $3 AND orden = $4`,
+    [ganadorId, ligaId, avance.ronda, avance.orden]
+  );
+}
+
+// POST /api/ligas/:id/generar-playoffs
+app.post('/api/ligas/:id/generar-playoffs', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { rows: [liga] } = await pool.query('SELECT * FROM ligas WHERE id = $1', [id]);
+    if (!liga) return res.status(404).json({ error: 'Liga no encontrada' });
+
+    await pool.query('DELETE FROM playoff_partidos WHERE liga_id = $1', [id]);
+
+    const { rows: jugadores } = await pool.query('SELECT * FROM jugadores WHERE liga_id = $1', [id]);
+    const { rows: partidos } = await pool.query('SELECT * FROM partidos WHERE liga_id = $1 AND goles1 IS NOT NULL', [id]);
+
+    const tabla = {};
+    jugadores.forEach(j => { tabla[j.id] = { id: j.id, pts: 0, dg: 0, gf: 0 }; });
+    partidos.forEach(p => {
+      const j1 = tabla[p.jugador1_id], j2 = tabla[p.jugador2_id];
+      if (!j1 || !j2) return;
+      j1.gf += p.goles1; j1.dg += p.goles1 - p.goles2;
+      j2.gf += p.goles2; j2.dg += p.goles2 - p.goles1;
+      if (p.goles1 > p.goles2) { j1.pts += 3; }
+      else if (p.goles1 < p.goles2) { j2.pts += 3; }
+      else { j1.pts++; j2.pts++; }
+    });
+    const seeds = Object.values(tabla)
+      .sort((a,b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf)
+      .slice(0, liga.num_playoff_jugadores || 4);
+
+    const n = seeds.length;
+    const ins = (ronda, orden, j1, j2) =>
+      pool.query('INSERT INTO playoff_partidos (liga_id, ronda, orden, jugador1_id, jugador2_id) VALUES ($1,$2,$3,$4,$5)',
+        [id, ronda, orden, j1, j2]);
+
+    if (n === 2) {
+      await ins('final', 1, seeds[0].id, seeds[1].id);
+    } else if (n === 4) {
+      await ins('semi', 1, seeds[0].id, seeds[3].id);
+      await ins('semi', 2, seeds[1].id, seeds[2].id);
+      await ins('final', 1, null, null);
+    } else if (n === 8) {
+      await ins('cuartos', 1, seeds[0].id, seeds[7].id);
+      await ins('cuartos', 2, seeds[1].id, seeds[6].id);
+      await ins('cuartos', 3, seeds[2].id, seeds[5].id);
+      await ins('cuartos', 4, seeds[3].id, seeds[4].id);
+      await ins('semi', 1, null, null);
+      await ins('semi', 2, null, null);
+      await ins('final', 1, null, null);
+    }
+
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/ligas/:id/playoffs
+app.get('/api/ligas/:id/playoffs', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT pp.*,
+        j1.nombre as jugador1_nombre, j1.equipo as jugador1_equipo,
+        j2.nombre as jugador2_nombre, j2.equipo as jugador2_equipo
+      FROM playoff_partidos pp
+      LEFT JOIN jugadores j1 ON pp.jugador1_id = j1.id
+      LEFT JOIN jugadores j2 ON pp.jugador2_id = j2.id
+      WHERE pp.liga_id = $1 ORDER BY pp.ronda, pp.orden
+    `, [req.params.id]);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT /api/playoff-partidos/:id
+app.put('/api/playoff-partidos/:id', async (req, res) => {
+  try {
+    const { goles1, goles2 } = req.body;
+    if (goles1 === undefined || goles2 === undefined)
+      return res.status(400).json({ error: 'Goles requeridos' });
+
+    const { rows: [pp] } = await pool.query('SELECT * FROM playoff_partidos WHERE id = $1', [req.params.id]);
+    if (!pp) return res.status(404).json({ error: 'Partido no encontrado' });
+
+    await pool.query('UPDATE playoff_partidos SET goles1 = $1, goles2 = $2 WHERE id = $3', [goles1, goles2, req.params.id]);
+
+    const { rows: [liga] } = await pool.query('SELECT * FROM ligas WHERE id = $1', [pp.liga_id]);
+    const n = liga.num_playoff_jugadores || 4;
+    const ganadorId = goles1 > goles2 ? pp.jugador1_id : pp.jugador2_id;
+    await avanzarGanador(pp.liga_id, pp.ronda, pp.orden, ganadorId, n);
+
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/ligas/:id/resetear-playoffs
+app.post('/api/ligas/:id/resetear-playoffs', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM playoff_partidos WHERE liga_id = $1', [req.params.id]);
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

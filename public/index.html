@@ -413,6 +413,55 @@
     .add-jugador-row input { flex: 1; min-width: 100px; }
     .team-equipo { font-size: 0.8rem; color: #888; margin-top: 2px; font-weight: normal; }
     .liga-nombre-input { margin-bottom: 12px; }
+
+    /* PLAYOFFS */
+    .playoff-bracket { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px; }
+    .playoff-ronda { flex-shrink: 0; min-width: 200px; }
+    .playoff-ronda-titulo {
+      font-size: 0.8rem; font-weight: bold; text-transform: uppercase;
+      color: #00d4ff; letter-spacing: 1px; margin-bottom: 10px;
+      padding: 4px 0; border-bottom: 1px solid #2a2a4a;
+    }
+    .playoff-match {
+      background: #0f0f1a;
+      border: 1px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .playoff-match.jugado { border-color: #00d4ff44; }
+    .playoff-match.ganado1 .pm-j1 { color: #00c853; font-weight: bold; }
+    .playoff-match.ganado2 .pm-j2 { color: #00c853; font-weight: bold; }
+    .pm-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 0; border-bottom: 1px solid #1a1a2e;
+    }
+    .pm-row:last-child { border-bottom: none; }
+    .pm-nombre { flex: 1; font-size: 0.9rem; }
+    .pm-equipo { font-size: 0.75rem; color: #666; }
+    .pm-score {
+      font-size: 1.1rem; font-weight: bold; color: #00d4ff;
+      min-width: 24px; text-align: center;
+    }
+    .pm-tbd { color: #555; font-style: italic; font-size: 0.85rem; }
+    .pm-inputs { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+    .pm-inputs input { width: 50px; text-align: center; font-size: 1rem; padding: 5px; }
+    .pm-inputs span { color: #aaa; }
+    .playoff-campeón {
+      text-align: center; padding: 20px;
+      background: linear-gradient(135deg, #ffd70022, #00d4ff11);
+      border: 1px solid #ffd70044;
+      border-radius: 12px; margin-top: 12px;
+    }
+    .playoff-campeón .corona { font-size: 2.5rem; }
+    .playoff-campeón .nombre { font-size: 1.3rem; font-weight: bold; color: #ffd700; margin-top: 6px; }
+    .playoff-campeón .equipo { font-size: 0.9rem; color: #888; margin-top: 4px; }
+
+    /* playoffs top-N selector */
+    .playoffs-config { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .playoffs-config select { padding: 6px 10px; font-size: 0.85rem; }
+    .playoffs-config-wrap { display: none; }
+    .playoffs-config-wrap.visible { display: flex; align-items: center; gap: 10px; }
   </style>
 </head>
 <body>
@@ -440,6 +489,18 @@
           <input type="checkbox" id="check-tarjetas" onchange="toggleCheck('check-tarjetas-label', this.checked)" />
           <span>🟡 Tarjetas y suspensiones</span>
         </label>
+        <label class="opcion-check" id="check-playoffs-label">
+          <input type="checkbox" id="check-playoffs" onchange="toggleCheck('check-playoffs-label', this.checked); togglePlayoffsConfig(this.checked)" />
+          <span>🏆 Playoffs</span>
+        </label>
+        <div class="playoffs-config-wrap" id="playoffs-config-wrap">
+          <span style="font-size:0.85rem;color:#aaa">Top</span>
+          <select id="num-playoff-jugadores">
+            <option value="2">2 jugadores</option>
+            <option value="4" selected>4 jugadores</option>
+            <option value="8">8 jugadores</option>
+          </select>
+        </div>
         <div class="tv-counter">
           <span>📺 TVs</span>
           <button onclick="cambiarTvs(-1)">−</button>
@@ -483,6 +544,7 @@
     <div id="tab-fixture"></div>
     <div id="tab-tabla" style="display:none"></div>
     <div id="tab-goleadores" style="display:none"></div>
+    <div id="tab-playoffs" style="display:none"></div>
   </div>
 </div>
 
@@ -538,6 +600,10 @@
     renderJugadoresPendientes();
   }
 
+  function togglePlayoffsConfig(checked) {
+    document.getElementById('playoffs-config-wrap').classList.toggle('visible', checked);
+  }
+
   async function crearLiga() {
     const nombre = document.getElementById('nueva-liga-nombre').value.trim();
     if (!nombre) { alert('Ponle un nombre a la liga'); return; }
@@ -545,11 +611,13 @@
 
     const tiene_goleadores = document.getElementById('check-goleadores').checked;
     const tiene_tarjetas = document.getElementById('check-tarjetas').checked;
+    const tiene_playoffs = document.getElementById('check-playoffs').checked;
+    const num_playoff_jugadores = parseInt(document.getElementById('num-playoff-jugadores').value) || 4;
 
     const res = await fetch('/api/ligas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, jugadores: jugadoresPendientes, tiene_goleadores, tiene_tarjetas, num_tvs: numTvsSeleccionado })
+      body: JSON.stringify({ nombre, jugadores: jugadoresPendientes, tiene_goleadores, tiene_tarjetas, num_tvs: numTvsSeleccionado, tiene_playoffs, num_playoff_jugadores })
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
@@ -560,8 +628,12 @@
     document.getElementById('nuevo-jugador-equipo').value = '';
     document.getElementById('check-goleadores').checked = false;
     document.getElementById('check-tarjetas').checked = false;
+    document.getElementById('check-playoffs').checked = false;
     document.getElementById('check-goleadores-label').classList.remove('checked');
     document.getElementById('check-tarjetas-label').classList.remove('checked');
+    document.getElementById('check-playoffs-label').classList.remove('checked');
+    document.getElementById('playoffs-config-wrap').classList.remove('visible');
+    document.getElementById('num-playoff-jugadores').value = '4';
     numTvsSeleccionado = 2;
     document.getElementById('num-tvs').textContent = '2';
     cargarListaLigas();
@@ -624,6 +696,7 @@
       <button class="tab" onclick="showTab('fixture')">Fixture</button>
       <button class="tab" onclick="showTab('tabla')">Tabla</button>
       ${liga.tiene_goleadores ? '<button class="tab" onclick="showTab(\'goleadores\')">Goleadores</button>' : ''}
+      ${liga.tiene_playoffs  ? '<button class="tab" onclick="showTab(\'playoffs\')">🏆 Playoffs</button>' : ''}
     `;
   }
 
@@ -932,14 +1005,144 @@
     document.getElementById('tab-fixture').style.display = tab === 'fixture' ? 'block' : 'none';
     document.getElementById('tab-tabla').style.display = tab === 'tabla' ? 'block' : 'none';
     document.getElementById('tab-goleadores').style.display = tab === 'goleadores' ? 'block' : 'none';
+    document.getElementById('tab-playoffs').style.display = tab === 'playoffs' ? 'block' : 'none';
 
-    document.querySelectorAll('#liga-tabs .tab').forEach(t => t.classList.remove('active'));
-    const idx = tab === 'fixture' ? 0 : tab === 'tabla' ? 1 : 2;
-    const tabs = document.querySelectorAll('#liga-tabs .tab');
-    if (tabs[idx]) tabs[idx].classList.add('active');
+    document.querySelectorAll('#liga-tabs .tab').forEach((t, i) => {
+      const tabNames = ['fixture', 'tabla',
+        ligaActual && ligaActual.tiene_goleadores ? 'goleadores' : null,
+        ligaActual && ligaActual.tiene_playoffs   ? 'playoffs'   : null
+      ].filter(Boolean);
+      t.classList.toggle('active', tabNames[i] === tab);
+    });
 
-    if (tab === 'tabla' && ligaActualId) renderTabla(ligaActualId);
+    if (tab === 'tabla'    && ligaActualId) renderTabla(ligaActualId);
     if (tab === 'goleadores' && ligaActualId) renderGoleadores(ligaActualId);
+    if (tab === 'playoffs'   && ligaActualId) renderPlayoffs(ligaActualId);
+  }
+
+  // ── PLAYOFFS ─────────────────────────────────────────────
+
+  const RONDA_LABELS = { cuartos: 'Cuartos de Final', semi: 'Semifinal', final: 'Final' };
+
+  async function renderPlayoffs(id) {
+    const el = document.getElementById('tab-playoffs');
+    const partidos = await fetch(`/api/ligas/${id}/playoffs`).then(r => r.json());
+
+    if (!partidos.length) {
+      el.innerHTML = `
+        <div class="card" style="text-align:center">
+          <div style="font-size:2rem;margin-bottom:12px">🏆</div>
+          <p style="color:#aaa;margin-bottom:16px">Genera los playoffs con los mejores jugadores de la tabla</p>
+          <button class="btn" onclick="generarPlayoffs()">Generar Playoffs</button>
+        </div>`;
+      return;
+    }
+
+    // Agrupar por ronda en orden correcto
+    const orden = ['cuartos', 'semi', 'final'];
+    const porRonda = {};
+    partidos.forEach(p => {
+      if (!porRonda[p.ronda]) porRonda[p.ronda] = [];
+      porRonda[p.ronda].push(p);
+    });
+
+    // Campeón: ganador de la final si está jugada
+    let campeonHTML = '';
+    const finales = porRonda['final'] || [];
+    const final = finales[0];
+    if (final && final.goles1 !== null) {
+      const campeon = final.goles1 > final.goles2
+        ? { nombre: final.jugador1_nombre, equipo: final.jugador1_equipo }
+        : { nombre: final.jugador2_nombre, equipo: final.jugador2_equipo };
+      campeonHTML = `
+        <div class="playoff-campeón">
+          <div class="corona">👑</div>
+          <div class="nombre">${escHtml(campeon.nombre)}</div>
+          ${campeon.equipo ? `<div class="equipo">${escHtml(campeon.equipo)}</div>` : ''}
+          <div style="color:#aaa;font-size:0.8rem;margin-top:8px">¡Campeón del torneo!</div>
+        </div>`;
+    }
+
+    let bracketHTML = '<div class="playoff-bracket">';
+    orden.filter(r => porRonda[r]).forEach(ronda => {
+      bracketHTML += `<div class="playoff-ronda">
+        <div class="playoff-ronda-titulo">${RONDA_LABELS[ronda] || ronda}</div>`;
+      porRonda[ronda].sort((a,b) => a.orden - b.orden).forEach(p => {
+        const jugado = p.goles1 !== null;
+        const ganado1 = jugado && p.goles1 > p.goles2;
+        const ganado2 = jugado && p.goles2 > p.goles1;
+        const cls = jugado ? 'jugado' + (ganado1 ? ' ganado1' : ganado2 ? ' ganado2' : '') : '';
+
+        const j1n = p.jugador1_nombre || '<span class="pm-tbd">Por definir</span>';
+        const j2n = p.jugador2_nombre || '<span class="pm-tbd">Por definir</span>';
+        const j1e = p.jugador1_equipo ? `<span class="pm-equipo">${escHtml(p.jugador1_equipo)}</span>` : '';
+        const j2e = p.jugador2_equipo ? `<span class="pm-equipo">${escHtml(p.jugador2_equipo)}</span>` : '';
+
+        bracketHTML += `<div class="playoff-match ${cls}" id="ppm-${p.id}">
+          <div class="pm-row pm-j1">
+            <span class="pm-nombre">${p.jugador1_nombre ? escHtml(p.jugador1_nombre) : '<span class="pm-tbd">Por definir</span>'}</span>
+            ${j1e}
+            ${jugado ? `<span class="pm-score">${p.goles1}</span>` : ''}
+          </div>
+          <div class="pm-row pm-j2">
+            <span class="pm-nombre">${p.jugador2_nombre ? escHtml(p.jugador2_nombre) : '<span class="pm-tbd">Por definir</span>'}</span>
+            ${j2e}
+            ${jugado ? `<span class="pm-score">${p.goles2}</span>` : ''}
+          </div>`;
+
+        // Inputs solo si ambos jugadores están definidos
+        if (p.jugador1_id && p.jugador2_id) {
+          bracketHTML += `<div class="pm-inputs">
+            <input type="number" min="0" max="99" placeholder="0" id="pg1-${p.id}" value="${jugado ? p.goles1 : ''}" style="width:50px" />
+            <span>-</span>
+            <input type="number" min="0" max="99" placeholder="0" id="pg2-${p.id}" value="${jugado ? p.goles2 : ''}" style="width:50px" />
+            <button class="btn btn-small btn-green" onclick="guardarResultadoPlayoff(${p.id})">✓</button>
+          </div>`;
+        }
+
+        bracketHTML += `</div>`;
+      });
+      bracketHTML += '</div>';
+    });
+    bracketHTML += '</div>';
+
+    el.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h2 style="margin:0">🏆 Playoffs</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-small" onclick="generarPlayoffs()">↺ Regenerar</button>
+            <button class="btn btn-small btn-red" onclick="resetearPlayoffs()">Resetear</button>
+          </div>
+        </div>
+        ${campeonHTML}
+        ${bracketHTML}
+      </div>`;
+  }
+
+  async function generarPlayoffs() {
+    await fetch(`/api/ligas/${ligaActualId}/generar-playoffs`, { method: 'POST' });
+    renderPlayoffs(ligaActualId);
+  }
+
+  async function resetearPlayoffs() {
+    if (!confirm('¿Resetear todos los playoffs?')) return;
+    await fetch(`/api/ligas/${ligaActualId}/resetear-playoffs`, { method: 'POST' });
+    renderPlayoffs(ligaActualId);
+  }
+
+  async function guardarResultadoPlayoff(id) {
+    const g1 = document.getElementById(`pg1-${id}`).value;
+    const g2 = document.getElementById(`pg2-${id}`).value;
+    if (g1 === '' || g2 === '') { alert('Ingresa los goles'); return; }
+    const n1 = parseInt(g1), n2 = parseInt(g2);
+    if (n1 === n2) { alert('En playoffs no puede haber empate'); return; }
+    await fetch(`/api/playoff-partidos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goles1: n1, goles2: n2 })
+    });
+    renderPlayoffs(ligaActualId);
   }
 
   // ── ELIMINAR / REINICIAR ──────────────────────────────────
