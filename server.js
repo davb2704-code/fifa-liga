@@ -75,6 +75,7 @@ db.exec(`
 try { db.exec("ALTER TABLE ligas ADD COLUMN tiene_goleadores INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE ligas ADD COLUMN tiene_tarjetas INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE jugadores ADD COLUMN equipo TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE ligas ADD COLUMN num_tvs INTEGER DEFAULT 2"); } catch(e) {}
 
 // Genera fixture round-robin
 function generarFixture(jugadores) {
@@ -149,14 +150,14 @@ function recalcSuspensiones(ligaId) {
 
 // POST /api/ligas - crear liga
 app.post('/api/ligas', (req, res) => {
-  const { nombre, jugadores, tiene_goleadores, tiene_tarjetas } = req.body;
+  const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs } = req.body;
   if (!nombre || !jugadores || jugadores.length < 2) {
     return res.status(400).json({ error: 'Nombre y al menos 2 jugadores requeridos' });
   }
 
   const liga = db.prepare(
-    'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas) VALUES (?, ?, ?)'
-  ).run(nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0);
+    'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs) VALUES (?, ?, ?, ?)'
+  ).run(nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2);
   const ligaId = liga.lastInsertRowid;
 
   const insertJugador = db.prepare('INSERT INTO jugadores (liga_id, nombre, equipo) VALUES (?, ?, ?)');
@@ -167,13 +168,14 @@ app.post('/api/ligas', (req, res) => {
     return { id: r.lastInsertRowid, nombre, equipo };
   });
 
+  const nTvs = num_tvs || 2;
   const fechas = generarFixture(jugadoresDb);
   const insertPartido = db.prepare(
     'INSERT INTO partidos (liga_id, fecha, tv, jugador1_id, jugador2_id) VALUES (?, ?, ?, ?, ?)'
   );
   fechas.forEach((partidos, fechaIdx) => {
     partidos.forEach((par, idx) => {
-      insertPartido.run(ligaId, fechaIdx + 1, (idx % 2) + 1, par[0].id, par[1].id);
+      insertPartido.run(ligaId, fechaIdx + 1, (idx % nTvs) + 1, par[0].id, par[1].id);
     });
   });
 

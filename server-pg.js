@@ -18,6 +18,7 @@ async function initDB() {
       nombre TEXT NOT NULL,
       tiene_goleadores INTEGER DEFAULT 0,
       tiene_tarjetas INTEGER DEFAULT 0,
+      num_tvs INTEGER DEFAULT 2,
       creada_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -136,13 +137,13 @@ async function recalcSuspensiones(ligaId) {
 // POST /api/ligas
 app.post('/api/ligas', async (req, res) => {
   try {
-    const { nombre, jugadores, tiene_goleadores, tiene_tarjetas } = req.body;
+    const { nombre, jugadores, tiene_goleadores, tiene_tarjetas, num_tvs } = req.body;
     if (!nombre || !jugadores || jugadores.length < 2)
       return res.status(400).json({ error: 'Nombre y al menos 2 jugadores requeridos' });
 
     const { rows: [liga] } = await pool.query(
-      'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas) VALUES ($1,$2,$3) RETURNING *',
-      [nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0]
+      'INSERT INTO ligas (nombre, tiene_goleadores, tiene_tarjetas, num_tvs) VALUES ($1,$2,$3,$4) RETURNING *',
+      [nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0, num_tvs || 2]
     );
 
     const jugadoresDb = [];
@@ -156,13 +157,14 @@ app.post('/api/ligas', async (req, res) => {
       jugadoresDb.push(jug);
     }
 
+    const nTvs = num_tvs || 2;
     const fechas = generarFixture(jugadoresDb);
     for (let fi = 0; fi < fechas.length; fi++) {
       for (let pi = 0; pi < fechas[fi].length; pi++) {
         const [j1, j2] = fechas[fi][pi];
         await pool.query(
           'INSERT INTO partidos (liga_id, fecha, tv, jugador1_id, jugador2_id) VALUES ($1,$2,$3,$4,$5)',
-          [liga.id, fi + 1, (pi % 2) + 1, j1.id, j2.id]
+          [liga.id, fi + 1, (pi % nTvs) + 1, j1.id, j2.id]
         );
       }
     }
