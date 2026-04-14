@@ -128,6 +128,28 @@ app.put('/api/partidos/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// DELETE /api/ligas/:id - eliminar liga
+app.delete('/api/ligas/:id', (req, res) => {
+  const id = req.params.id;
+  const liga = db.prepare('SELECT * FROM ligas WHERE id = ?').get(id);
+  if (!liga) return res.status(404).json({ error: 'Liga no encontrada' });
+
+  db.prepare('DELETE FROM partidos WHERE liga_id = ?').run(id);
+  db.prepare('DELETE FROM jugadores WHERE liga_id = ?').run(id);
+  db.prepare('DELETE FROM ligas WHERE id = ?').run(id);
+  res.json({ ok: true });
+});
+
+// POST /api/ligas/:id/reiniciar - reiniciar resultados
+app.post('/api/ligas/:id/reiniciar', (req, res) => {
+  const id = req.params.id;
+  const liga = db.prepare('SELECT * FROM ligas WHERE id = ?').get(id);
+  if (!liga) return res.status(404).json({ error: 'Liga no encontrada' });
+
+  db.prepare('UPDATE partidos SET goles1 = NULL, goles2 = NULL WHERE liga_id = ?').run(id);
+  res.json({ ok: true });
+});
+
 // GET /api/ligas/:id/tabla - tabla de posiciones
 app.get('/api/ligas/:id/tabla', (req, res) => {
   const jugadores = db.prepare('SELECT * FROM jugadores WHERE liga_id = ?').all(req.params.id);

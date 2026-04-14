@@ -302,9 +302,12 @@
     <button class="back-btn" onclick="volverHome()">← Volver</button>
     <h2 id="liga-titulo" style="margin-bottom:16px; font-size:1.3rem;"></h2>
 
-    <div class="tabs">
-      <button class="tab active" onclick="showTab('fixture')">Fixture</button>
-      <button class="tab" onclick="showTab('tabla')">Tabla</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="tabs" style="margin-bottom:0">
+        <button class="tab active" onclick="showTab('fixture')">Fixture</button>
+        <button class="tab" onclick="showTab('tabla')">Tabla</button>
+      </div>
+      <button class="btn btn-small btn-red" onclick="reiniciarFixture()">Reiniciar</button>
     </div>
 
     <div id="tab-fixture"></div>
@@ -378,7 +381,10 @@
     el.innerHTML = ligas.map(l =>
       `<div class="liga-item" onclick="abrirLiga(${l.id})">
         <span>🏆 ${l.nombre}</span>
-        <span style="color:#555;font-size:0.8rem">→</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="color:#555;font-size:0.8rem">→</span>
+          <button class="btn btn-small btn-red" onclick="event.stopPropagation();eliminarLiga(${l.id},'${l.nombre}')">Eliminar</button>
+        </div>
       </div>`
     ).join('');
   }
@@ -509,6 +515,18 @@
     document.getElementById('tab-tabla').style.display = tab === 'tabla' ? 'block' : 'none';
     document.querySelectorAll('.tab')[tab === 'fixture' ? 0 : 1].classList.add('active');
     if (tab === 'tabla' && ligaActualId) renderTabla(ligaActualId);
+  }
+
+  async function eliminarLiga(id, nombre) {
+    if (!confirm(`¿Eliminar la liga "${nombre}"? Se borran todos los partidos.`)) return;
+    await fetch(`/api/ligas/${id}`, { method: 'DELETE' });
+    cargarListaLigas();
+  }
+
+  async function reiniciarFixture() {
+    if (!confirm('¿Reiniciar todos los resultados? Los goles se borran.')) return;
+    await fetch(`/api/ligas/${ligaActualId}/reiniciar`, { method: 'POST' });
+    cargarLiga(ligaActualId);
   }
 
   // Init
