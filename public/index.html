@@ -22,7 +22,6 @@
       gap: 12px;
       border-bottom: 2px solid #00d4ff;
     }
-
     header h1 { font-size: 1.4rem; color: #00d4ff; }
     header span { font-size: 1.6rem; }
 
@@ -45,10 +44,7 @@
       border: 2px solid #00d4ff;
       color: #00d4ff;
     }
-    .btn-small {
-      padding: 6px 14px;
-      font-size: 0.85rem;
-    }
+    .btn-small { padding: 6px 14px; font-size: 0.85rem; }
     .btn-green { background: #00c853; }
     .btn-red { background: #ff3d3d; color: #fff; }
 
@@ -59,7 +55,6 @@
       margin-bottom: 16px;
       border: 1px solid #2a2a4a;
     }
-
     .card h2 { margin-bottom: 16px; font-size: 1.1rem; color: #00d4ff; }
 
     input[type="text"], input[type="number"] {
@@ -72,6 +67,47 @@
       width: 100%;
     }
     input:focus { outline: none; border-color: #00d4ff; }
+
+    select {
+      background: #0f0f1a;
+      border: 1px solid #2a2a4a;
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    select:focus { outline: none; border-color: #00d4ff; }
+
+    /* Checkboxes de opciones */
+    .opciones-liga {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .opcion-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f0f1a;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      user-select: none;
+    }
+    .opcion-check:hover { border-color: #00d4ff; }
+    .opcion-check input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #00d4ff;
+      cursor: pointer;
+    }
+    .opcion-check span { font-size: 0.9rem; color: #ccc; }
+    .opcion-check.checked { border-color: #00d4ff; }
+    .opcion-check.checked span { color: #fff; }
 
     .liga-item {
       display: flex;
@@ -88,7 +124,7 @@
     .liga-item:hover { border-color: #00d4ff; }
 
     /* TABS */
-    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
     .tab {
       padding: 8px 18px;
       border-radius: 20px;
@@ -141,15 +177,14 @@
       align-items: center;
       gap: 12px;
       justify-content: center;
+      margin-bottom: 10px;
     }
-
     .team-name {
       font-weight: bold;
       font-size: 1rem;
       flex: 1;
       text-align: center;
     }
-
     .score-display {
       font-size: 1.4rem;
       font-weight: bold;
@@ -162,31 +197,79 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-top: 10px;
       justify-content: center;
+      margin-bottom: 10px;
     }
-
-    .score-inputs input {
-      width: 55px;
-      text-align: center;
-      font-size: 1.1rem;
-      padding: 6px;
-    }
-
+    .score-inputs input { width: 55px; text-align: center; font-size: 1.1rem; padding: 6px; }
     .score-inputs span { color: #aaa; }
 
-    .jugado-badge {
-      font-size: 0.75rem;
-      color: #00c853;
-      font-weight: bold;
+    .jugado-badge { font-size: 0.75rem; color: #00c853; font-weight: bold; }
+
+    /* SUSPENSIONES */
+    .susp-alerts { margin-bottom: 8px; }
+    .susp-badge {
+      background: #ff3d3d22;
+      border: 1px solid #ff3d3d66;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      color: #ff8080;
+      margin-bottom: 4px;
+    }
+
+    /* GOLEADORES EN PARTIDO */
+    .scorers-grid {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .scorers-side { flex: 1; }
+    .scorers-label {
+      font-size: 0.78rem;
+      color: #888;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .scorer-input {
+      margin-bottom: 6px;
+      padding: 7px 10px;
+      font-size: 0.85rem;
+    }
+
+    /* TARJETAS EN PARTIDO */
+    .cards-grid {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+      border-top: 1px solid #1a1a2e;
+      padding-top: 10px;
+    }
+    .cards-side { flex: 1; }
+    .card-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .card-row .card-futbolista {
+      flex: 1;
+      padding: 6px 8px;
+      font-size: 0.82rem;
+    }
+    .card-row select { flex-shrink: 0; }
+    .card-row .btn-remove {
+      background: none;
+      border: none;
+      color: #ff3d3d;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
     }
 
     /* TABLA */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     th {
       text-align: center;
       padding: 8px 4px;
@@ -196,11 +279,7 @@
       font-size: 0.8rem;
     }
     th:first-child { text-align: left; }
-    td {
-      text-align: center;
-      padding: 10px 4px;
-      border-bottom: 1px solid #1a1a2e;
-    }
+    td { text-align: center; padding: 10px 4px; border-bottom: 1px solid #1a1a2e; }
     td:first-child { text-align: left; }
     tr:first-child td { color: #ffd700; font-weight: bold; }
     tr:nth-child(2) td { color: #c0c0c0; }
@@ -208,8 +287,7 @@
 
     .pos-num {
       display: inline-flex;
-      width: 24px;
-      height: 24px;
+      width: 24px; height: 24px;
       background: #2a2a4a;
       border-radius: 50%;
       align-items: center;
@@ -220,8 +298,41 @@
     tr:first-child .pos-num { background: #ffd700; color: #000; }
     tr:nth-child(2) .pos-num { background: #c0c0c0; color: #000; }
     tr:nth-child(3) .pos-num { background: #cd7f32; color: #000; }
-
     .pts-cell { font-weight: bold; font-size: 1rem; color: #00d4ff; }
+
+    /* TABLA GOLEADORES */
+    .goleador-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: #0f0f1a;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      border: 1px solid #1a1a2e;
+    }
+    .goleador-pos {
+      display: inline-flex;
+      width: 28px; height: 28px;
+      background: #2a2a4a;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .goleador-row:first-child .goleador-pos { background: #ffd700; color: #000; }
+    .goleador-row:nth-child(2) .goleador-pos { background: #c0c0c0; color: #000; }
+    .goleador-row:nth-child(3) .goleador-pos { background: #cd7f32; color: #000; }
+    .goleador-nombre { flex: 1; font-weight: bold; }
+    .goleador-goles {
+      background: #00d4ff22;
+      color: #00d4ff;
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+    }
 
     /* Pantallas */
     .screen { display: none; }
@@ -254,10 +365,8 @@
       border-radius: 20px;
       font-size: 0.85rem;
     }
-
     .add-jugador-row { display: flex; gap: 8px; margin-bottom: 12px; }
     .add-jugador-row input { flex: 1; }
-
     .liga-nombre-input { margin-bottom: 12px; }
   </style>
 </head>
@@ -276,6 +385,18 @@
       <div class="liga-nombre-input">
         <input type="text" id="nueva-liga-nombre" placeholder="Nombre de la liga (ej: Liga de Panas)" />
       </div>
+
+      <div class="opciones-liga">
+        <label class="opcion-check" id="check-goleadores-label">
+          <input type="checkbox" id="check-goleadores" onchange="toggleCheck('check-goleadores-label', this.checked)" />
+          <span>⚽ Goleadores</span>
+        </label>
+        <label class="opcion-check" id="check-tarjetas-label">
+          <input type="checkbox" id="check-tarjetas" onchange="toggleCheck('check-tarjetas-label', this.checked)" />
+          <span>🟡 Tarjetas y suspensiones</span>
+        </label>
+      </div>
+
       <div class="jugadores-list" id="jugadores-preview"></div>
       <div class="add-jugador-row">
         <input type="text" id="nuevo-jugador-input" placeholder="Nombre del jugador" maxlength="20" />
@@ -303,35 +424,34 @@
     <h2 id="liga-titulo" style="margin-bottom:16px; font-size:1.3rem;"></h2>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="tabs" style="margin-bottom:0">
-        <button class="tab active" onclick="showTab('fixture')">Fixture</button>
-        <button class="tab" onclick="showTab('tabla')">Tabla</button>
-      </div>
+      <div class="tabs" id="liga-tabs"></div>
       <button class="btn btn-small btn-red" onclick="reiniciarFixture()">Reiniciar</button>
     </div>
 
     <div id="tab-fixture"></div>
     <div id="tab-tabla" style="display:none"></div>
+    <div id="tab-goleadores" style="display:none"></div>
   </div>
 </div>
 
 <script>
   let jugadoresPendientes = [];
   let ligaActualId = null;
+  let ligaActual = null;
 
-  // Input enter
   document.getElementById('nuevo-jugador-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') agregarJugador();
   });
+
+  function toggleCheck(labelId, checked) {
+    document.getElementById(labelId).classList.toggle('checked', checked);
+  }
 
   function agregarJugador() {
     const input = document.getElementById('nuevo-jugador-input');
     const nombre = input.value.trim();
     if (!nombre) return;
-    if (jugadoresPendientes.includes(nombre)) {
-      alert('Ese jugador ya está en la lista');
-      return;
-    }
+    if (jugadoresPendientes.includes(nombre)) { alert('Ese jugador ya está en la lista'); return; }
     jugadoresPendientes.push(nombre);
     input.value = '';
     renderJugadoresPendientes();
@@ -339,8 +459,7 @@
   }
 
   function renderJugadoresPendientes() {
-    const el = document.getElementById('jugadores-preview');
-    el.innerHTML = jugadoresPendientes.map((j, i) =>
+    document.getElementById('jugadores-preview').innerHTML = jugadoresPendientes.map((j, i) =>
       `<div class="jugador-tag">${j} <span onclick="quitarJugador(${i})" style="cursor:pointer;color:#ff3d3d;margin-left:4px">×</span></div>`
     ).join('');
   }
@@ -355,10 +474,13 @@
     if (!nombre) { alert('Ponle un nombre a la liga'); return; }
     if (jugadoresPendientes.length < 2) { alert('Agrega al menos 2 jugadores'); return; }
 
+    const tiene_goleadores = document.getElementById('check-goleadores').checked;
+    const tiene_tarjetas = document.getElementById('check-tarjetas').checked;
+
     const res = await fetch('/api/ligas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, jugadores: jugadoresPendientes })
+      body: JSON.stringify({ nombre, jugadores: jugadoresPendientes, tiene_goleadores, tiene_tarjetas })
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
@@ -366,6 +488,10 @@
     jugadoresPendientes = [];
     renderJugadoresPendientes();
     document.getElementById('nueva-liga-nombre').value = '';
+    document.getElementById('check-goleadores').checked = false;
+    document.getElementById('check-tarjetas').checked = false;
+    document.getElementById('check-goleadores-label').classList.remove('checked');
+    document.getElementById('check-tarjetas-label').classList.remove('checked');
     cargarListaLigas();
     abrirLiga(data.id);
   }
@@ -378,15 +504,22 @@
       el.innerHTML = `<div class="empty-state"><div class="emoji">🏆</div><div>No hay ligas aún</div></div>`;
       return;
     }
-    el.innerHTML = ligas.map(l =>
-      `<div class="liga-item" onclick="abrirLiga(${l.id})">
-        <span>🏆 ${l.nombre}</span>
+    el.innerHTML = ligas.map(l => {
+      const badges = [
+        l.tiene_goleadores ? '⚽' : '',
+        l.tiene_tarjetas   ? '🟡' : ''
+      ].filter(Boolean).join(' ');
+      return `<div class="liga-item" onclick="abrirLiga(${l.id})">
+        <div>
+          <span>🏆 ${l.nombre}</span>
+          ${badges ? `<span style="margin-left:8px;font-size:0.8rem;color:#888">${badges}</span>` : ''}
+        </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="color:#555;font-size:0.8rem">→</span>
           <button class="btn btn-small btn-red" onclick="event.stopPropagation();eliminarLiga(${l.id},'${l.nombre}')">Eliminar</button>
         </div>
-      </div>`
-    ).join('');
+      </div>`;
+    }).join('');
   }
 
   async function abrirLiga(id) {
@@ -401,54 +534,175 @@
     document.getElementById('screen-liga').classList.remove('active');
     document.getElementById('screen-home').classList.add('active');
     ligaActualId = null;
+    ligaActual = null;
     cargarListaLigas();
   }
 
   async function cargarLiga(id) {
     const res = await fetch(`/api/ligas/${id}`);
-    const liga = await res.json();
-    document.getElementById('liga-titulo').textContent = '🏆 ' + liga.nombre;
-    renderFixture(liga.partidos, liga.jugadores);
-    renderTabla(id);
+    ligaActual = await res.json();
+    document.getElementById('liga-titulo').textContent = '🏆 ' + ligaActual.nombre;
+    renderTabs(ligaActual);
+    renderFixture(ligaActual);
   }
 
-  function renderFixture(partidos, jugadores) {
+  function renderTabs(liga) {
+    document.getElementById('liga-tabs').innerHTML = `
+      <button class="tab" onclick="showTab('fixture')">Fixture</button>
+      <button class="tab" onclick="showTab('tabla')">Tabla</button>
+      ${liga.tiene_goleadores ? '<button class="tab" onclick="showTab(\'goleadores\')">Goleadores</button>' : ''}
+    `;
+  }
+
+  // ── FIXTURE ──────────────────────────────────────────────
+
+  function renderFixture(liga) {
     const porFecha = {};
-    partidos.forEach(p => {
+    liga.partidos.forEach(p => {
       if (!porFecha[p.fecha]) porFecha[p.fecha] = [];
       porFecha[p.fecha].push(p);
     });
 
-    const el = document.getElementById('tab-fixture');
     let html = '';
-
-    Object.keys(porFecha).sort((a,b) => a-b).forEach(fecha => {
+    Object.keys(porFecha).sort((a, b) => a - b).forEach(fecha => {
       html += `<div class="fecha-header">Fecha ${fecha}</div>`;
-      porFecha[fecha].forEach(p => {
-        const jugado = p.goles1 !== null;
-        const tvClass = p.tv === 2 ? 'tv2' : '';
-        html += `
-          <div class="partido-card" id="partido-${p.id}">
-            <div class="partido-header">
-              <span class="tv-badge ${tvClass}">TV${p.tv}</span>
-              ${jugado ? '<span class="jugado-badge">✓ Jugado</span>' : ''}
-            </div>
-            <div class="partido-teams">
-              <div class="team-name">${p.jugador1_nombre}</div>
-              <div class="score-display">${jugado ? `${p.goles1} - ${p.goles2}` : 'vs'}</div>
-              <div class="team-name">${p.jugador2_nombre}</div>
-            </div>
-            <div class="score-inputs">
-              <input type="number" min="0" max="99" placeholder="0" id="g1-${p.id}" value="${jugado ? p.goles1 : ''}" style="width:55px;text-align:center" />
-              <span>-</span>
-              <input type="number" min="0" max="99" placeholder="0" id="g2-${p.id}" value="${jugado ? p.goles2 : ''}" style="width:55px;text-align:center" />
-              <button class="btn btn-small btn-green" onclick="guardarResultado(${p.id})">Guardar</button>
-            </div>
-          </div>`;
-      });
+      porFecha[fecha].forEach(p => { html += renderPartidoCard(p, liga); });
     });
 
-    el.innerHTML = html;
+    document.getElementById('tab-fixture').innerHTML = html;
+  }
+
+  function renderPartidoCard(p, liga) {
+    const jugado = p.goles1 !== null;
+    const tvClass = p.tv === 2 ? 'tv2' : '';
+
+    // Suspensiones para este partido
+    let suspHTML = '';
+    if (liga.tiene_tarjetas && p.suspensiones && p.suspensiones.length > 0) {
+      suspHTML = '<div class="susp-alerts">' +
+        p.suspensiones.map(s =>
+          `<div class="susp-badge">🚫 <b>${s.jugador_nombre}</b>: ${s.futbolista} suspendido</div>`
+        ).join('') +
+        '</div>';
+    }
+
+    // Goleadores por lado
+    const scorers1 = (p.goles_detalle || []).filter(g => g.jugador_id === p.jugador1_id);
+    const scorers2 = (p.goles_detalle || []).filter(g => g.jugador_id === p.jugador2_id);
+    const n1 = jugado ? p.goles1 : 0;
+    const n2 = jugado ? p.goles2 : 0;
+
+    let scorersHTML = '';
+    if (liga.tiene_goleadores) {
+      scorersHTML = `
+        <div class="scorers-grid" id="scorers-grid-${p.id}">
+          <div class="scorers-side">
+            <div class="scorers-label">⚽ ${p.jugador1_nombre}</div>
+            <div id="scorers1-${p.id}">
+              ${Array.from({length: n1}).map((_, i) =>
+                `<input type="text" class="scorer-input" placeholder="Gol ${i+1}: futbolista"
+                  id="s1-${p.id}-${i}" value="${scorers1[i] ? escHtml(scorers1[i].futbolista) : ''}" maxlength="25" />`
+              ).join('')}
+            </div>
+          </div>
+          <div class="scorers-side">
+            <div class="scorers-label">⚽ ${p.jugador2_nombre}</div>
+            <div id="scorers2-${p.id}">
+              ${Array.from({length: n2}).map((_, i) =>
+                `<input type="text" class="scorer-input" placeholder="Gol ${i+1}: futbolista"
+                  id="s2-${p.id}-${i}" value="${scorers2[i] ? escHtml(scorers2[i].futbolista) : ''}" maxlength="25" />`
+              ).join('')}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // Tarjetas por lado
+    const cards1 = (p.tarjetas_detalle || []).filter(t => t.jugador_id === p.jugador1_id);
+    const cards2 = (p.tarjetas_detalle || []).filter(t => t.jugador_id === p.jugador2_id);
+
+    let tarjetasHTML = '';
+    if (liga.tiene_tarjetas) {
+      tarjetasHTML = `
+        <div class="cards-grid">
+          <div class="cards-side">
+            <div class="scorers-label">🃏 ${p.jugador1_nombre}</div>
+            <div id="cards1-${p.id}">
+              ${cards1.map((c, i) => renderCardRow(p.id, 1, i, c.futbolista, c.tipo)).join('')}
+            </div>
+            <button class="btn btn-small btn-outline" style="margin-top:4px" onclick="addTarjeta(${p.id},1)">+ Tarjeta</button>
+          </div>
+          <div class="cards-side">
+            <div class="scorers-label">🃏 ${p.jugador2_nombre}</div>
+            <div id="cards2-${p.id}">
+              ${cards2.map((c, i) => renderCardRow(p.id, 2, i, c.futbolista, c.tipo)).join('')}
+            </div>
+            <button class="btn btn-small btn-outline" style="margin-top:4px" onclick="addTarjeta(${p.id},2)">+ Tarjeta</button>
+          </div>
+        </div>`;
+    }
+
+    const scoreInputsOnInput = liga.tiene_goleadores
+      ? `oninput="updateScorerInputs(${p.id},1,this.value,'${escAtr(p.jugador1_nombre)}')"` : '';
+    const scoreInputsOnInput2 = liga.tiene_goleadores
+      ? `oninput="updateScorerInputs(${p.id},2,this.value,'${escAtr(p.jugador2_nombre)}')"` : '';
+
+    return `
+      <div class="partido-card" id="partido-${p.id}">
+        <div class="partido-header">
+          <span class="tv-badge ${tvClass}">TV${p.tv}</span>
+          ${jugado ? '<span class="jugado-badge">✓ Jugado</span>' : ''}
+        </div>
+        ${suspHTML}
+        <div class="partido-teams">
+          <div class="team-name">${p.jugador1_nombre}</div>
+          <div class="score-display">${jugado ? `${p.goles1} - ${p.goles2}` : 'vs'}</div>
+          <div class="team-name">${p.jugador2_nombre}</div>
+        </div>
+        <div class="score-inputs">
+          <input type="number" min="0" max="99" placeholder="0" id="g1-${p.id}"
+            value="${jugado ? p.goles1 : ''}" style="width:55px;text-align:center" ${scoreInputsOnInput} />
+          <span>-</span>
+          <input type="number" min="0" max="99" placeholder="0" id="g2-${p.id}"
+            value="${jugado ? p.goles2 : ''}" style="width:55px;text-align:center" ${scoreInputsOnInput2} />
+          <button class="btn btn-small btn-green" onclick="guardarResultado(${p.id})">Guardar</button>
+        </div>
+        ${scorersHTML}
+        ${tarjetasHTML}
+      </div>`;
+  }
+
+  function renderCardRow(partidoId, side, idx, futbolista, tipo) {
+    return `<div class="card-row" id="cardrow-${partidoId}-${side}-${idx}">
+      <input type="text" class="card-futbolista" placeholder="Futbolista" maxlength="25"
+        value="${escHtml(futbolista)}" />
+      <select class="card-tipo">
+        <option value="amarilla" ${tipo === 'amarilla' ? 'selected' : ''}>🟡 Amarilla</option>
+        <option value="roja" ${tipo === 'roja' ? 'selected' : ''}>🔴 Roja</option>
+      </select>
+      <button class="btn-remove" onclick="this.closest('.card-row').remove()">×</button>
+    </div>`;
+  }
+
+  function addTarjeta(partidoId, side) {
+    const container = document.getElementById(`cards${side}-${partidoId}`);
+    const idx = container.children.length;
+    const div = document.createElement('div');
+    div.innerHTML = renderCardRow(partidoId, side, idx, '', 'amarilla');
+    container.appendChild(div.firstElementChild);
+  }
+
+  function updateScorerInputs(partidoId, side, count, nombreJugador) {
+    const n = Math.max(0, parseInt(count) || 0);
+    const container = document.getElementById(`scorers${side}-${partidoId}`);
+    if (!container) return;
+    const existing = Array.from(container.querySelectorAll('input')).map(i => i.value);
+    let html = '';
+    for (let i = 0; i < n; i++) {
+      html += `<input type="text" class="scorer-input" placeholder="Gol ${i+1}: futbolista"
+        id="s${side}-${partidoId}-${i}" value="${escHtml(existing[i] || '')}" maxlength="25" />`;
+    }
+    container.innerHTML = html;
   }
 
   async function guardarResultado(id) {
@@ -456,66 +710,112 @@
     const g2 = document.getElementById(`g2-${id}`).value;
     if (g1 === '' || g2 === '') { alert('Ingresa los goles de ambos jugadores'); return; }
 
+    const n1 = parseInt(g1) || 0;
+    const n2 = parseInt(g2) || 0;
+
+    // Leer goleadores
+    const goleadores1 = [], goleadores2 = [];
+    if (ligaActual && ligaActual.tiene_goleadores) {
+      for (let i = 0; i < n1; i++) {
+        const inp = document.getElementById(`s1-${id}-${i}`);
+        goleadores1.push(inp ? inp.value : '');
+      }
+      for (let i = 0; i < n2; i++) {
+        const inp = document.getElementById(`s2-${id}-${i}`);
+        goleadores2.push(inp ? inp.value : '');
+      }
+    }
+
+    // Leer tarjetas
+    const tarjetas1 = [], tarjetas2 = [];
+    if (ligaActual && ligaActual.tiene_tarjetas) {
+      const c1 = document.getElementById(`cards1-${id}`);
+      const c2 = document.getElementById(`cards2-${id}`);
+      if (c1) c1.querySelectorAll('.card-row').forEach(row => {
+        const f = row.querySelector('.card-futbolista').value;
+        const t = row.querySelector('.card-tipo').value;
+        if (f.trim()) tarjetas1.push({ futbolista: f.trim(), tipo: t });
+      });
+      if (c2) c2.querySelectorAll('.card-row').forEach(row => {
+        const f = row.querySelector('.card-futbolista').value;
+        const t = row.querySelector('.card-tipo').value;
+        if (f.trim()) tarjetas2.push({ futbolista: f.trim(), tipo: t });
+      });
+    }
+
     await fetch(`/api/partidos/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goles1: parseInt(g1), goles2: parseInt(g2) })
+      body: JSON.stringify({ goles1: n1, goles2: n2, goleadores1, goleadores2, tarjetas1, tarjetas2 })
     });
 
     cargarLiga(ligaActualId);
   }
 
+  // ── TABLA ─────────────────────────────────────────────────
+
   async function renderTabla(id) {
     const res = await fetch(`/api/ligas/${id}/tabla`);
     const tabla = await res.json();
-
     const el = document.getElementById('tab-tabla');
     if (!tabla.length) { el.innerHTML = '<div class="empty-state">Sin datos aún</div>'; return; }
 
-    let html = `
-      <div class="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Jugador</th>
-              <th>PJ</th>
-              <th>PG</th>
-              <th>PE</th>
-              <th>PP</th>
-              <th>GF</th>
-              <th>GC</th>
-              <th>DG</th>
-              <th>PTS</th>
-            </tr>
-          </thead>
-          <tbody>`;
-
+    let html = `<div class="card"><table>
+      <thead><tr>
+        <th>Jugador</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th>
+        <th>GF</th><th>GC</th><th>DG</th><th>PTS</th>
+      </tr></thead><tbody>`;
     tabla.forEach((j, i) => {
-      html += `
-        <tr>
-          <td><span class="pos-num">${i+1}</span>${j.nombre}</td>
-          <td>${j.pj}</td>
-          <td>${j.pg}</td>
-          <td>${j.pe}</td>
-          <td>${j.pp}</td>
-          <td>${j.gf}</td>
-          <td>${j.gc}</td>
-          <td>${j.dg > 0 ? '+' : ''}${j.dg}</td>
-          <td class="pts-cell">${j.pts}</td>
-        </tr>`;
+      html += `<tr>
+        <td><span class="pos-num">${i+1}</span>${j.nombre}</td>
+        <td>${j.pj}</td><td>${j.pg}</td><td>${j.pe}</td><td>${j.pp}</td>
+        <td>${j.gf}</td><td>${j.gc}</td>
+        <td>${j.dg > 0 ? '+' : ''}${j.dg}</td>
+        <td class="pts-cell">${j.pts}</td>
+      </tr>`;
     });
-
     html += '</tbody></table></div>';
     el.innerHTML = html;
   }
 
+  // ── GOLEADORES ────────────────────────────────────────────
+
+  async function renderGoleadores(id) {
+    const res = await fetch(`/api/ligas/${id}/goleadores`);
+    const data = await res.json();
+    const el = document.getElementById('tab-goleadores');
+    if (!data.length) {
+      el.innerHTML = '<div class="empty-state"><div class="emoji">⚽</div><div>Sin goles registrados</div></div>';
+      return;
+    }
+    el.innerHTML = '<div class="card"><h2>Tabla de Goleadores</h2>' +
+      data.map((g, i) =>
+        `<div class="goleador-row">
+          <span class="goleador-pos">${i+1}</span>
+          <span class="goleador-nombre">${escHtml(g.futbolista)}</span>
+          <span class="goleador-goles">⚽ ${g.goles}</span>
+        </div>`
+      ).join('') +
+      '</div>';
+  }
+
+  // ── TABS ─────────────────────────────────────────────────
+
   function showTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-fixture').style.display = tab === 'fixture' ? 'block' : 'none';
     document.getElementById('tab-tabla').style.display = tab === 'tabla' ? 'block' : 'none';
-    document.querySelectorAll('.tab')[tab === 'fixture' ? 0 : 1].classList.add('active');
+    document.getElementById('tab-goleadores').style.display = tab === 'goleadores' ? 'block' : 'none';
+
+    document.querySelectorAll('#liga-tabs .tab').forEach(t => t.classList.remove('active'));
+    const idx = tab === 'fixture' ? 0 : tab === 'tabla' ? 1 : 2;
+    const tabs = document.querySelectorAll('#liga-tabs .tab');
+    if (tabs[idx]) tabs[idx].classList.add('active');
+
     if (tab === 'tabla' && ligaActualId) renderTabla(ligaActualId);
+    if (tab === 'goleadores' && ligaActualId) renderGoleadores(ligaActualId);
   }
+
+  // ── ELIMINAR / REINICIAR ──────────────────────────────────
 
   async function eliminarLiga(id, nombre) {
     if (!confirm(`¿Eliminar la liga "${nombre}"? Se borran todos los partidos.`)) return;
@@ -524,9 +824,18 @@
   }
 
   async function reiniciarFixture() {
-    if (!confirm('¿Reiniciar todos los resultados? Los goles se borran.')) return;
+    if (!confirm('¿Reiniciar todos los resultados? Los goles y tarjetas se borran.')) return;
     await fetch(`/api/ligas/${ligaActualId}/reiniciar`, { method: 'POST' });
     cargarLiga(ligaActualId);
+  }
+
+  // ── UTILS ─────────────────────────────────────────────────
+
+  function escHtml(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAtr(str) {
+    return (str || '').replace(/'/g, "\\'");
   }
 
   // Init
