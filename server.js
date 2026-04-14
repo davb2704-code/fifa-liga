@@ -318,5 +318,20 @@ app.get('/api/ligas/:id/goleadores', (req, res) => {
   res.json(rows);
 });
 
+// GET /api/ligas/:id/tarjetas-resumen
+app.get('/api/ligas/:id/tarjetas-resumen', (req, res) => {
+  const rows = db.prepare(`
+    SELECT LOWER(t.futbolista) as key, t.futbolista,
+      SUM(CASE WHEN t.tipo = 'amarilla' THEN 1 ELSE 0 END) as amarillas,
+      SUM(CASE WHEN t.tipo = 'roja'    THEN 1 ELSE 0 END) as rojas
+    FROM tarjetas t
+    JOIN partidos p ON t.partido_id = p.id
+    WHERE p.liga_id = ?
+    GROUP BY LOWER(t.futbolista)
+    ORDER BY rojas DESC, amarillas DESC, t.futbolista ASC
+  `).all(req.params.id);
+  res.json(rows);
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

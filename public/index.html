@@ -781,22 +781,44 @@
   // ── GOLEADORES ────────────────────────────────────────────
 
   async function renderGoleadores(id) {
-    const res = await fetch(`/api/ligas/${id}/goleadores`);
-    const data = await res.json();
+    const [resG, resT] = await Promise.all([
+      fetch(`/api/ligas/${id}/goleadores`),
+      fetch(`/api/ligas/${id}/tarjetas-resumen`)
+    ]);
+    const goles = await resG.json();
+    const tarjetas = await resT.json();
     const el = document.getElementById('tab-goleadores');
-    if (!data.length) {
-      el.innerHTML = '<div class="empty-state"><div class="emoji">⚽</div><div>Sin goles registrados</div></div>';
-      return;
+
+    let html = '';
+
+    if (goles.length) {
+      html += '<div class="card"><h2>⚽ Goleadores</h2>' +
+        goles.map((g, i) =>
+          `<div class="goleador-row">
+            <span class="goleador-pos">${i+1}</span>
+            <span class="goleador-nombre">${escHtml(g.futbolista)}</span>
+            <span class="goleador-goles">⚽ ${g.goles}</span>
+          </div>`
+        ).join('') +
+        '</div>';
+    } else {
+      html += '<div class="empty-state"><div class="emoji">⚽</div><div>Sin goles registrados</div></div>';
     }
-    el.innerHTML = '<div class="card"><h2>Tabla de Goleadores</h2>' +
-      data.map((g, i) =>
-        `<div class="goleador-row">
-          <span class="goleador-pos">${i+1}</span>
-          <span class="goleador-nombre">${escHtml(g.futbolista)}</span>
-          <span class="goleador-goles">⚽ ${g.goles}</span>
-        </div>`
-      ).join('') +
-      '</div>';
+
+    if (tarjetas.length) {
+      html += '<div class="card" style="margin-top:0"><h2>🟡 Tarjetas</h2>' +
+        tarjetas.map(t => {
+          const amarillas = '🟡'.repeat(t.amarillas);
+          const rojas     = '🔴'.repeat(t.rojas);
+          return `<div class="goleador-row">
+            <span class="goleador-nombre">${escHtml(t.futbolista)}</span>
+            <span style="font-size:1rem;letter-spacing:2px">${amarillas}${rojas}</span>
+          </div>`;
+        }).join('') +
+        '</div>';
+    }
+
+    el.innerHTML = html || '<div class="empty-state"><div class="emoji">📋</div><div>Sin datos aún</div></div>';
   }
 
   // ── TABS ─────────────────────────────────────────────────
