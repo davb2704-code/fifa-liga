@@ -365,8 +365,9 @@
       border-radius: 20px;
       font-size: 0.85rem;
     }
-    .add-jugador-row { display: flex; gap: 8px; margin-bottom: 12px; }
-    .add-jugador-row input { flex: 1; }
+    .add-jugador-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .add-jugador-row input { flex: 1; min-width: 100px; }
+    .team-equipo { font-size: 0.8rem; color: #888; margin-top: 2px; font-weight: normal; }
     .liga-nombre-input { margin-bottom: 12px; }
   </style>
 </head>
@@ -400,6 +401,7 @@
       <div class="jugadores-list" id="jugadores-preview"></div>
       <div class="add-jugador-row">
         <input type="text" id="nuevo-jugador-input" placeholder="Nombre del jugador" maxlength="20" />
+        <input type="text" id="nuevo-jugador-equipo" placeholder="Equipo + bandera 🏳️" maxlength="30" />
         <button class="btn btn-outline" onclick="agregarJugador()">+ Agregar</button>
       </div>
       <button class="btn" onclick="crearLiga()">Crear Liga</button>
@@ -440,6 +442,9 @@
   let ligaActual = null;
 
   document.getElementById('nuevo-jugador-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('nuevo-jugador-equipo').focus();
+  });
+  document.getElementById('nuevo-jugador-equipo').addEventListener('keydown', e => {
     if (e.key === 'Enter') agregarJugador();
   });
 
@@ -448,19 +453,25 @@
   }
 
   function agregarJugador() {
-    const input = document.getElementById('nuevo-jugador-input');
-    const nombre = input.value.trim();
+    const inputN = document.getElementById('nuevo-jugador-input');
+    const inputE = document.getElementById('nuevo-jugador-equipo');
+    const nombre = inputN.value.trim();
+    const equipo = inputE.value.trim();
     if (!nombre) return;
-    if (jugadoresPendientes.includes(nombre)) { alert('Ese jugador ya está en la lista'); return; }
-    jugadoresPendientes.push(nombre);
-    input.value = '';
+    if (jugadoresPendientes.find(j => j.nombre === nombre)) { alert('Ese jugador ya está en la lista'); return; }
+    jugadoresPendientes.push({ nombre, equipo });
+    inputN.value = ''; inputE.value = '';
     renderJugadoresPendientes();
-    input.focus();
+    inputN.focus();
   }
 
   function renderJugadoresPendientes() {
     document.getElementById('jugadores-preview').innerHTML = jugadoresPendientes.map((j, i) =>
-      `<div class="jugador-tag">${j} <span onclick="quitarJugador(${i})" style="cursor:pointer;color:#ff3d3d;margin-left:4px">×</span></div>`
+      `<div class="jugador-tag">
+        <span>${escHtml(j.nombre)}</span>
+        ${j.equipo ? `<span style="color:#888;font-size:0.8rem;margin-left:4px">${escHtml(j.equipo)}</span>` : ''}
+        <span onclick="quitarJugador(${i})" style="cursor:pointer;color:#ff3d3d;margin-left:6px">×</span>
+      </div>`
     ).join('');
   }
 
@@ -488,6 +499,7 @@
     jugadoresPendientes = [];
     renderJugadoresPendientes();
     document.getElementById('nueva-liga-nombre').value = '';
+    document.getElementById('nuevo-jugador-equipo').value = '';
     document.getElementById('check-goleadores').checked = false;
     document.getElementById('check-tarjetas').checked = false;
     document.getElementById('check-goleadores-label').classList.remove('checked');
@@ -655,9 +667,15 @@
         </div>
         ${suspHTML}
         <div class="partido-teams">
-          <div class="team-name">${p.jugador1_nombre}</div>
+          <div class="team-name">
+            ${p.jugador1_nombre}
+            ${p.jugador1_equipo ? `<div class="team-equipo">${escHtml(p.jugador1_equipo)}</div>` : ''}
+          </div>
           <div class="score-display">${jugado ? `${p.goles1} - ${p.goles2}` : 'vs'}</div>
-          <div class="team-name">${p.jugador2_nombre}</div>
+          <div class="team-name">
+            ${p.jugador2_nombre}
+            ${p.jugador2_equipo ? `<div class="team-equipo">${escHtml(p.jugador2_equipo)}</div>` : ''}
+          </div>
         </div>
         <div class="score-inputs">
           <input type="number" min="0" max="99" placeholder="0" id="g1-${p.id}"
@@ -767,7 +785,10 @@
       </tr></thead><tbody>`;
     tabla.forEach((j, i) => {
       html += `<tr>
-        <td><span class="pos-num">${i+1}</span>${j.nombre}</td>
+        <td>
+          <span class="pos-num">${i+1}</span>${j.nombre}
+          ${j.equipo ? `<div class="team-equipo" style="display:inline;margin-left:6px">${escHtml(j.equipo)}</div>` : ''}
+        </td>
         <td>${j.pj}</td><td>${j.pg}</td><td>${j.pe}</td><td>${j.pp}</td>
         <td>${j.gf}</td><td>${j.gc}</td>
         <td>${j.dg > 0 ? '+' : ''}${j.dg}</td>

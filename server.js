@@ -74,6 +74,7 @@ db.exec(`
 // Migraciones para ligas existentes
 try { db.exec("ALTER TABLE ligas ADD COLUMN tiene_goleadores INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE ligas ADD COLUMN tiene_tarjetas INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE jugadores ADD COLUMN equipo TEXT DEFAULT ''"); } catch(e) {}
 
 // Genera fixture round-robin
 function generarFixture(jugadores) {
@@ -158,10 +159,12 @@ app.post('/api/ligas', (req, res) => {
   ).run(nombre, tiene_goleadores ? 1 : 0, tiene_tarjetas ? 1 : 0);
   const ligaId = liga.lastInsertRowid;
 
-  const insertJugador = db.prepare('INSERT INTO jugadores (liga_id, nombre) VALUES (?, ?)');
-  const jugadoresDb = jugadores.map(n => {
-    const r = insertJugador.run(ligaId, n);
-    return { id: r.lastInsertRowid, nombre: n };
+  const insertJugador = db.prepare('INSERT INTO jugadores (liga_id, nombre, equipo) VALUES (?, ?, ?)');
+  const jugadoresDb = jugadores.map(j => {
+    const nombre = typeof j === 'string' ? j : j.nombre;
+    const equipo = typeof j === 'string' ? '' : (j.equipo || '');
+    const r = insertJugador.run(ligaId, nombre, equipo);
+    return { id: r.lastInsertRowid, nombre, equipo };
   });
 
   const fechas = generarFixture(jugadoresDb);
@@ -189,7 +192,9 @@ app.get('/api/ligas/:id', (req, res) => {
 
   const jugadores = db.prepare('SELECT * FROM jugadores WHERE liga_id = ?').all(req.params.id);
   const partidos = db.prepare(`
-    SELECT p.*, j1.nombre as jugador1_nombre, j2.nombre as jugador2_nombre
+    SELECT p.*,
+      j1.nombre as jugador1_nombre, j1.equipo as jugador1_equipo,
+      j2.nombre as jugador2_nombre, j2.equipo as jugador2_equipo
     FROM partidos p
     JOIN jugadores j1 ON p.jugador1_id = j1.id
     JOIN jugadores j2 ON p.jugador2_id = j2.id
@@ -288,7 +293,7 @@ app.get('/api/ligas/:id/tabla', (req, res) => {
 
   const tabla = {};
   jugadores.forEach(j => {
-    tabla[j.id] = { id: j.id, nombre: j.nombre, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0, pts: 0 };
+    tabla[j.id] = { id: j.id, nombre: j.nombre, equipo: j.equipo || '', pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0, pts: 0 };
   });
   partidos.forEach(p => {
     const j1 = tabla[p.jugador1_id], j2 = tabla[p.jugador2_id];
