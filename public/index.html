@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIFA Liga</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 2px solid #00d4ff;
+    }
+
+    header h1 { font-size: 1.4rem; color: #00d4ff; }
+    header span { font-size: 1.6rem; }
+
+    .container { max-width: 700px; margin: 0 auto; padding: 20px; }
+
+    .btn {
+      background: #00d4ff;
+      color: #0f0f1a;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid #00d4ff;
+      color: #00d4ff;
+    }
+    .btn-small {
+      padding: 6px 14px;
+      font-size: 0.85rem;
+    }
+    .btn-green { background: #00c853; }
+    .btn-red { background: #ff3d3d; color: #fff; }
+
+    .card {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid #2a2a4a;
+    }
+
+    .card h2 { margin-bottom: 16px; font-size: 1.1rem; color: #00d4ff; }
+
+    input[type="text"], input[type="number"] {
+      background: #0f0f1a;
+      border: 1px solid #2a2a4a;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      width: 100%;
+    }
+    input:focus { outline: none; border-color: #00d4ff; }
+
+    .liga-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #0f0f1a;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #2a2a4a;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .liga-item:hover { border-color: #00d4ff; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab {
+      padding: 8px 18px;
+      border-radius: 20px;
+      border: 1px solid #2a2a4a;
+      background: transparent;
+      color: #aaa;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .tab.active { background: #00d4ff; color: #0f0f1a; border-color: #00d4ff; font-weight: bold; }
+
+    /* FECHA */
+    .fecha-header {
+      background: linear-gradient(90deg, #00d4ff22, transparent);
+      border-left: 3px solid #00d4ff;
+      padding: 8px 14px;
+      margin-bottom: 10px;
+      border-radius: 0 8px 8px 0;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    .partido-card {
+      background: #0f0f1a;
+      border: 1px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+    }
+
+    .partido-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .tv-badge {
+      background: #ff6b00;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .tv-badge.tv2 { background: #7c3aed; }
+
+    .partido-teams {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .team-name {
+      font-weight: bold;
+      font-size: 1rem;
+      flex: 1;
+      text-align: center;
+    }
+
+    .score-display {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #00d4ff;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .score-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      justify-content: center;
+    }
+
+    .score-inputs input {
+      width: 55px;
+      text-align: center;
+      font-size: 1.1rem;
+      padding: 6px;
+    }
+
+    .score-inputs span { color: #aaa; }
+
+    .jugado-badge {
+      font-size: 0.75rem;
+      color: #00c853;
+      font-weight: bold;
+    }
+
+    /* TABLA */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th {
+      text-align: center;
+      padding: 8px 4px;
+      color: #aaa;
+      font-weight: normal;
+      border-bottom: 1px solid #2a2a4a;
+      font-size: 0.8rem;
+    }
+    th:first-child { text-align: left; }
+    td {
+      text-align: center;
+      padding: 10px 4px;
+      border-bottom: 1px solid #1a1a2e;
+    }
+    td:first-child { text-align: left; }
+    tr:first-child td { color: #ffd700; font-weight: bold; }
+    tr:nth-child(2) td { color: #c0c0c0; }
+    tr:nth-child(3) td { color: #cd7f32; }
+
+    .pos-num {
+      display: inline-flex;
+      width: 24px;
+      height: 24px;
+      background: #2a2a4a;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      margin-right: 8px;
+    }
+    tr:first-child .pos-num { background: #ffd700; color: #000; }
+    tr:nth-child(2) .pos-num { background: #c0c0c0; color: #000; }
+    tr:nth-child(3) .pos-num { background: #cd7f32; color: #000; }
+
+    .pts-cell { font-weight: bold; font-size: 1rem; color: #00d4ff; }
+
+    /* Pantallas */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: none;
+      border: none;
+      color: #00d4ff;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      padding: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #555;
+    }
+    .empty-state .emoji { font-size: 3rem; margin-bottom: 12px; }
+
+    .jugadores-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .jugador-tag {
+      background: #2a2a4a;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+
+    .add-jugador-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .add-jugador-row input { flex: 1; }
+
+    .liga-nombre-input { margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>⚽</span>
+  <h1>FIFA Liga</h1>
+</header>
+
+<!-- PANTALLA: Lista de ligas -->
+<div class="screen active" id="screen-home">
+  <div class="container">
+    <div class="card">
+      <h2>Nueva Liga</h2>
+      <div class="liga-nombre-input">
+        <input type="text" id="nueva-liga-nombre" placeholder="Nombre de la liga (ej: Liga de Panas)" />
+      </div>
+      <div class="jugadores-list" id="jugadores-preview"></div>
+      <div class="add-jugador-row">
+        <input type="text" id="nuevo-jugador-input" placeholder="Nombre del jugador" maxlength="20" />
+        <button class="btn btn-outline" onclick="agregarJugador()">+ Agregar</button>
+      </div>
+      <button class="btn" onclick="crearLiga()">Crear Liga</button>
+    </div>
+
+    <div class="card">
+      <h2>Ligas activas</h2>
+      <div id="lista-ligas">
+        <div class="empty-state">
+          <div class="emoji">🏆</div>
+          <div>No hay ligas aún</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANTALLA: Detalle de liga -->
+<div class="screen" id="screen-liga">
+  <div class="container">
+    <button class="back-btn" onclick="volverHome()">← Volver</button>
+    <h2 id="liga-titulo" style="margin-bottom:16px; font-size:1.3rem;"></h2>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('fixture')">Fixture</button>
+      <button class="tab" onclick="showTab('tabla')">Tabla</button>
+    </div>
+
+    <div id="tab-fixture"></div>
+    <div id="tab-tabla" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+  let jugadoresPendientes = [];
+  let ligaActualId = null;
+
+  // Input enter
+  document.getElementById('nuevo-jugador-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') agregarJugador();
+  });
+
+  function agregarJugador() {
+    const input = document.getElementById('nuevo-jugador-input');
+    const nombre = input.value.trim();
+    if (!nombre) return;
+    if (jugadoresPendientes.includes(nombre)) {
+      alert('Ese jugador ya está en la lista');
+      return;
+    }
+    jugadoresPendientes.push(nombre);
+    input.value = '';
+    renderJugadoresPendientes();
+    input.focus();
+  }
+
+  function renderJugadoresPendientes() {
+    const el = document.getElementById('jugadores-preview');
+    el.innerHTML = jugadoresPendientes.map((j, i) =>
+      `<div class="jugador-tag">${j} <span onclick="quitarJugador(${i})" style="cursor:pointer;color:#ff3d3d;margin-left:4px">×</span></div>`
+    ).join('');
+  }
+
+  function quitarJugador(i) {
+    jugadoresPendientes.splice(i, 1);
+    renderJugadoresPendientes();
+  }
+
+  async function crearLiga() {
+    const nombre = document.getElementById('nueva-liga-nombre').value.trim();
+    if (!nombre) { alert('Ponle un nombre a la liga'); return; }
+    if (jugadoresPendientes.length < 2) { alert('Agrega al menos 2 jugadores'); return; }
+
+    const res = await fetch('/api/ligas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, jugadores: jugadoresPendientes })
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+
+    jugadoresPendientes = [];
+    renderJugadoresPendientes();
+    document.getElementById('nueva-liga-nombre').value = '';
+    cargarListaLigas();
+    abrirLiga(data.id);
+  }
+
+  async function cargarListaLigas() {
+    const res = await fetch('/api/ligas');
+    const ligas = await res.json();
+    const el = document.getElementById('lista-ligas');
+    if (!ligas.length) {
+      el.innerHTML = `<div class="empty-state"><div class="emoji">🏆</div><div>No hay ligas aún</div></div>`;
+      return;
+    }
+    el.innerHTML = ligas.map(l =>
+      `<div class="liga-item" onclick="abrirLiga(${l.id})">
+        <span>🏆 ${l.nombre}</span>
+        <span style="color:#555;font-size:0.8rem">→</span>
+      </div>`
+    ).join('');
+  }
+
+  async function abrirLiga(id) {
+    ligaActualId = id;
+    document.getElementById('screen-home').classList.remove('active');
+    document.getElementById('screen-liga').classList.add('active');
+    await cargarLiga(id);
+    showTab('fixture');
+  }
+
+  function volverHome() {
+    document.getElementById('screen-liga').classList.remove('active');
+    document.getElementById('screen-home').classList.add('active');
+    ligaActualId = null;
+    cargarListaLigas();
+  }
+
+  async function cargarLiga(id) {
+    const res = await fetch(`/api/ligas/${id}`);
+    const liga = await res.json();
+    document.getElementById('liga-titulo').textContent = '🏆 ' + liga.nombre;
+    renderFixture(liga.partidos, liga.jugadores);
+    renderTabla(id);
+  }
+
+  function renderFixture(partidos, jugadores) {
+    const porFecha = {};
+    partidos.forEach(p => {
+      if (!porFecha[p.fecha]) porFecha[p.fecha] = [];
+      porFecha[p.fecha].push(p);
+    });
+
+    const el = document.getElementById('tab-fixture');
+    let html = '';
+
+    Object.keys(porFecha).sort((a,b) => a-b).forEach(fecha => {
+      html += `<div class="fecha-header">Fecha ${fecha}</div>`;
+      porFecha[fecha].forEach(p => {
+        const jugado = p.goles1 !== null;
+        const tvClass = p.tv === 2 ? 'tv2' : '';
+        html += `
+          <div class="partido-card" id="partido-${p.id}">
+            <div class="partido-header">
+              <span class="tv-badge ${tvClass}">TV${p.tv}</span>
+              ${jugado ? '<span class="jugado-badge">✓ Jugado</span>' : ''}
+            </div>
+            <div class="partido-teams">
+              <div class="team-name">${p.jugador1_nombre}</div>
+              <div class="score-display">${jugado ? `${p.goles1} - ${p.goles2}` : 'vs'}</div>
+              <div class="team-name">${p.jugador2_nombre}</div>
+            </div>
+            <div class="score-inputs">
+              <input type="number" min="0" max="99" placeholder="0" id="g1-${p.id}" value="${jugado ? p.goles1 : ''}" style="width:55px;text-align:center" />
+              <span>-</span>
+              <input type="number" min="0" max="99" placeholder="0" id="g2-${p.id}" value="${jugado ? p.goles2 : ''}" style="width:55px;text-align:center" />
+              <button class="btn btn-small btn-green" onclick="guardarResultado(${p.id})">Guardar</button>
+            </div>
+          </div>`;
+      });
+    });
+
+    el.innerHTML = html;
+  }
+
+  async function guardarResultado(id) {
+    const g1 = document.getElementById(`g1-${id}`).value;
+    const g2 = document.getElementById(`g2-${id}`).value;
+    if (g1 === '' || g2 === '') { alert('Ingresa los goles de ambos jugadores'); return; }
+
+    await fetch(`/api/partidos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goles1: parseInt(g1), goles2: parseInt(g2) })
+    });
+
+    cargarLiga(ligaActualId);
+  }
+
+  async function renderTabla(id) {
+    const res = await fetch(`/api/ligas/${id}/tabla`);
+    const tabla = await res.json();
+
+    const el = document.getElementById('tab-tabla');
+    if (!tabla.length) { el.innerHTML = '<div class="empty-state">Sin datos aún</div>'; return; }
+
+    let html = `
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Jugador</th>
+              <th>PJ</th>
+              <th>PG</th>
+              <th>PE</th>
+              <th>PP</th>
+              <th>GF</th>
+              <th>GC</th>
+              <th>DG</th>
+              <th>PTS</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+    tabla.forEach((j, i) => {
+      html += `
+        <tr>
+          <td><span class="pos-num">${i+1}</span>${j.nombre}</td>
+          <td>${j.pj}</td>
+          <td>${j.pg}</td>
+          <td>${j.pe}</td>
+          <td>${j.pp}</td>
+          <td>${j.gf}</td>
+          <td>${j.gc}</td>
+          <td>${j.dg > 0 ? '+' : ''}${j.dg}</td>
+          <td class="pts-cell">${j.pts}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  }
+
+  function showTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-fixture').style.display = tab === 'fixture' ? 'block' : 'none';
+    document.getElementById('tab-tabla').style.display = tab === 'tabla' ? 'block' : 'none';
+    document.querySelectorAll('.tab')[tab === 'fixture' ? 0 : 1].classList.add('active');
+    if (tab === 'tabla' && ligaActualId) renderTabla(ligaActualId);
+  }
+
+  // Init
+  cargarListaLigas();
+</script>
+</body>
+</html>
